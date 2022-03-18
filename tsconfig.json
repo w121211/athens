@@ -15,13 +15,8 @@
     "rootDir": "src/js/components/",
     "baseUrl": "src/js/components",
     "paths": {
-      "@/*": [
-        "./*"
-      ],
+      "@/*": ["./*"]
     }
   },
-  "include": [
-    "src/js/components/**/*.tsx",
-    "src/js/components/**/*.ts"
-  ]
+  "include": ["src/js/components/**/*.tsx", "src/js/components/**/*.ts"]
 }

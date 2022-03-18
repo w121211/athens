@@ -1,0 +1,8 @@
+version: "2"
+services:
+  athens-app:
+    volumes:
+      - app-sync:/workspace:nocopy # nocopy is important
+volumes:
+  app-sync:
+    external: true

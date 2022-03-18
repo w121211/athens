@@ -53,3 +53,7 @@ vercel-static/*
 !vercel-static/index.html
 !vercel-state/athens/.gitignore
 .vercel
+
+.docker-sync
+node_modules/
+.next
