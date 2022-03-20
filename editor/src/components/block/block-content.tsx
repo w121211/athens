@@ -4,12 +4,8 @@ import { memo } from 'react'
 import { MouseEvent } from 'react'
 import { useEffect } from 'react'
 import { events } from '../../events'
-import { Block } from '../../stores/block/block.repository'
 import { rfdbRepo } from '../../stores/rfdb.repository'
-import { BlockElState } from './block-el'
 import { textareaKeyDown } from '../../textarea-keydown'
-
-type SetBlockElStateFn = React.Dispatch<React.SetStateAction<BlockElState>>
 
 // const findSelectedItems = (e, sourceUid, targetUid) => {
 //   const target = e.target,
@@ -67,26 +63,22 @@ type SetBlockElStateFn = React.Dispatch<React.SetStateAction<BlockElState>>
 //   }
 // }
 
-const textareaChange = (
-  e: React.ChangeEvent<HTMLTextAreaElement>,
+function textareaChange(
+  event: React.ChangeEvent<HTMLTextAreaElement>,
   _uid: string,
   state: BlockElState,
-  setState: SetBlockElStateFn,
-) => {
-  // swap(state, { string: { local: e.target.value } })
+  setState: BlockElStateSetFn,
+) {
   setState({
     ...state,
-    string: {
-      ...state.string,
-      local: e.target.value,
-    },
+    str: { ...state.str, local: event.target.value },
   })
-  if (state.string.idleFn) {
-    state.string.idleFn()
-  }
+  // if (state.string.idleFn) {
+  //   state.string.idleFn()
+  // }
 }
 
-function textareaClick(e: MouseEvent, targetUid: string, state: BlockElState): void {
+function textareaClick(event: MouseEvent, targetUid: string): void {
   // const [targetUid] = uidAndEmbedId(targetUid),
   // const sourceUid = subscribe('editing/uid'),
   //   shift = e.shiftKey
@@ -94,7 +86,7 @@ function textareaClick(e: MouseEvent, targetUid: string, state: BlockElState): v
   //   findSelectedItems(e, sourceUid, targetUid)
   //   dispatchEvent('select-events/clear')
   // }
-  const shift = e.shiftKey
+  const shift = event.shiftKey
   rfdbRepo.editingUid$.subscribe(sourceUid => {
     if (shift && sourceUid && targetUid && sourceUid !== targetUid) {
       // findSelectedItems(e, sourceUid, targetUid)
@@ -121,7 +113,7 @@ function textareaMouseDown(e: MouseEvent) {
   }
 }
 
-const textareaMouseEnter = (e, targetUid, _) => {
+function textareaMouseEnter() {
   const { editing, mouseDown } = rfdbRepo.getValue(),
     sourceUid = editing?.uid
 
@@ -134,32 +126,30 @@ const textareaMouseEnter = (e, targetUid, _) => {
 
 // View
 
-const _BlockContentEl = ({
+export const BlockContent = ({
   block,
   state,
   setState,
 }: {
   block: Block
   state: BlockElState
-  setState: SetBlockElStateFn
+  setState: React.Dispatch<React.SetStateAction<BlockElState>>
 }) => {
   // const { uid, originalUid, header } = block.block,
-  // editing = subscribe('editing/is-editing', uid),
-  // selectedItems = subscribe('select-subs/items')
-  const { uid } = block,
-    [editing] = useObservable(rfdbRepo.getBlockIsEditing$(uid))
   // selectedItems = subscribe('select-subs/items')
 
+  const { uid } = block,
+    [editing] = useObservable(rfdbRepo.getBlockIsEditing$(uid))
+
   useEffect(() => {
-    console.log('BlockContentEl::enter ' + uid)
-    // console.log(state.showEditableDom)
+    // console.debug('BlockContentEl::enter ' + uid)
   })
 
   return (
-    <div>
+    <div className="block-content">
       {(state.showEditableDom || editing) && (
         <textarea
-          value={state.string.local ?? ''}
+          value={state.str.local ?? ''}
           // className={['textarea', empty(selectedItems) && editing ? 'is-editing' : undefined].join('')}
           id={`editable-uid-${uid}`}
           onChange={e => {
@@ -169,26 +159,27 @@ const _BlockContentEl = ({
           //   textareaPaste(e, uid, state)
           // }}
           onKeyDown={e => {
-            textareaKeyDown(e, uid, state, editing)
+            textareaKeyDown(e, uid, editing, state, setState)
           }}
           // onBlur={state.string.saveFn}
           onClick={e => {
-            textareaClick(e, uid, state)
+            textareaClick(e, uid)
           }}
           onMouseEnter={e => {
-            textareaMouseEnter(e, uid, state)
+            textareaMouseEnter()
           }}
           onMouseDown={e => {
             textareaMouseDown(e)
           }}
         />
       )}
+
       {/* {parseAndRender(state.string.local, originalUid || uid)} */}
       <span>
-        {state.string.local}xxxxxxxxxxxx{uid}
+        {state.str.local}xxxxxxxxxxxx{uid}
       </span>
     </div>
   )
 }
 
-export const BlockContentEl = memo(_BlockContentEl)
+export const MemoBlockContent = memo(BlockContent)

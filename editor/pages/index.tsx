@@ -4,7 +4,7 @@ import { memo } from 'react'
 import { useEffect } from 'react'
 import { KeyboardEvent, ReactNode } from 'react'
 import { debounceTime, fromEvent, of, Subject, tap, throttle, throttleTime } from 'rxjs'
-import { NodePageEl } from '../src/components/node-page'
+import { NotePage } from '../src/components/note-container'
 
 // document.addEventListener('mousedown', unfocus)
 // window.addEventListener('keydown', multiBlockSelection)
@@ -86,9 +86,9 @@ export const Home = (): JSX.Element => {
   return (
     <>
       <Script src="./textarea.js" strategy="beforeInteractive" />
-      {/* <NodePageEl ident={'haha'} /> */}
+      <NotePage ident={'haha'} />
 
-      <RenderHook />
+      {/* <RenderHook /> */}
     </>
   )
 }

@@ -1,21 +1,13 @@
-import { insert, reorder } from '../../src/stores/block/order'
-import { Block } from '../../src/stores/block/types'
+import { diff } from 'deep-object-diff'
+import { Block } from '../../src/interfaces'
+import { insert, moveBetween, moveWithin, reorder } from '../../src/op/order'
+import { blocks } from '../helpers'
 
-// beforeAll(() => {
-//   const blocks: Block[] = [
-//     { uid: '1', str: '1', order: 0, parentUid: null, childrenUids: ['2', '3'], pageTitle: 'A' },
-//     { uid: '2', str: '2', order: 0, parentUid: '1', childrenUids: [] },
-//     { uid: '3', str: '3', order: 0, parentUid: '2', childrenUids: [] },
-//   ]
-// })
+// jest.spyOn(console, 'error')
+// // @ts-ignore jest.spyOn adds this functionallity
+// console.error.mockImplementation(() => null)
 
-// type Blocktom = number | Blocktom[]
-
-// function blockit(nestedIds: Blocktom) {
-//   // for ()
-// }
-
-// blockit([1, [2, 3], [4, 5]])
+// beforeEach(() => {})
 
 it('insert()', () => {
   const v: Block[] = [
@@ -44,19 +36,113 @@ it('insert()', () => {
   expect(insert(v, x, 'after', v[2])).toEqual([...v, x])
 })
 
-// it('reorder()', () => {
-//   const before: Block[] = [
-//     { uid: '1', str: '1', order: 0, parentUid: '1', childrenUids: [] },
-//     { uid: '2', str: '2', order: 1, parentUid: '1', childrenUids: [] },
-//     { uid: '3', str: '3', order: 2, parentUid: '1', childrenUids: [] },
-//   ]
-//   const after: Block[] = [
-//     { uid: '1', str: '1', order: 0, parentUid: '1', childrenUids: [] },
-//     { uid: '3', str: '3', order: 2, parentUid: '1', childrenUids: [] },
-//     { uid: '2', str: '2', order: 1, parentUid: '1', childrenUids: [] },
-//   ]
-//   // const after = [...before]
-//   // after[2].order = 3
+it('moveBetween()', () => {
+  /**
+   *  a0
+   *  - b1
+   *    - c3
+   *       -d5
+   *    - c4
+   *    - c6
+   *  - b2
+   *
+   */
+  const [a0, b1, b2, c3, c4, d5, c6] = blocks,
+    va = [a0],
+    vb = [b1, b2],
+    vc = [c3, c4, c6],
+    vd = [d5]
 
-//   expect(reorder(after, before)).toEqual([])
-// })
+  expect(() =>
+    expect(moveBetween(va, vc, a0, 'before', a0)),
+  ).toThrowErrorMatchingInlineSnapshot(
+    `"[moveBetween] x and ref are the same block"`,
+  )
+  expect(() =>
+    expect(moveBetween(va, vc, b1, 'before', c3)),
+  ).toThrowErrorMatchingInlineSnapshot(`"[moveBetween] x is not in src"`)
+  expect(() =>
+    expect(moveBetween(va, vc, a0, 'before', d5)),
+  ).toThrowErrorMatchingInlineSnapshot(`"[moveBetween] ref is not in dest"`)
+
+  expect(moveBetween(va, vc, a0, 'before', c3)).toEqual([[], [a0, ...vc]])
+  expect(moveBetween(va, vc, a0, 'after', c3)).toEqual([[], [c3, a0, c4, c6]])
+  expect(moveBetween(va, vc, a0, 'first', c3)).toEqual([[], [a0, ...vc]])
+  expect(moveBetween(va, vc, a0, 'last', c3)).toEqual([[], [...vc, a0]])
+
+  expect(moveBetween(vd, vc, d5, 'before', c3)).toEqual([[], [d5, ...vc]])
+})
+
+it('moveWithin()', () => {
+  /**
+   *  a0
+   *  - b1
+   *    - c3
+   *       -d5
+   *    - c4
+   *    - c6
+   *  - b2
+   *
+   */
+  const [a0, b1, b2, c3, c4, d5, c6] = blocks,
+    va = [a0],
+    vb = [b1, b2],
+    vc = [c3, c4, c6],
+    vd = [d5]
+
+  expect(() =>
+    moveWithin(vd, d5, 'before', d5),
+  ).toThrowErrorMatchingInlineSnapshot(
+    `"[moveWithin] x and ref are the same block"`,
+  )
+
+  expect(() =>
+    moveWithin(va, b1, 'before', a0),
+  ).toThrowErrorMatchingInlineSnapshot(`"[moveWithin] x is not in v"`)
+
+  expect(() =>
+    moveWithin(vc, c3, 'after', d5),
+  ).toThrowErrorMatchingInlineSnapshot(`"[moveWithin] ref is not in v"`)
+
+  expect(moveWithin(vb, b1, 'before', b2)).toEqual([b1, b2])
+  expect(moveWithin(vb, b1, 'after', b2)).toEqual([b2, b1])
+
+  expect(moveWithin(vc, c3, 'first', c4)).toEqual([c3, c4, c6])
+  expect(moveWithin(vc, c3, 'first', c6)).toEqual([c3, c4, c6])
+  expect(moveWithin(vc, c4, 'first', c3)).toEqual([c4, c3, c6])
+  expect(moveWithin(vc, c4, 'first', c6)).toEqual([c4, c3, c6])
+
+  expect(moveWithin(vc, c4, 'last', c3)).toEqual([c3, c6, c4])
+  expect(moveWithin(vc, c4, 'last', c6)).toEqual([c3, c6, c4])
+  expect(moveWithin(vc, c6, 'last', c3)).toEqual([c3, c4, c6])
+  expect(moveWithin(vc, c6, 'last', c4)).toEqual([c3, c4, c6])
+})
+
+it('reorder()', () => {
+  function print(blocks: Block[]) {
+    return blocks.map((e) => `${e.uid}_${e.order}`).join(', ')
+  }
+
+  /**
+   *  a0
+   *  - b1
+   *    - c3
+   *       -d5
+   *    - c4
+   *    - c6
+   *  - b2
+   *
+   */
+  const [a0, b1, b2, c3, c4, d5, c6] = blocks,
+    va = [a0],
+    vb = [b1, b2],
+    vc = [c3, c4, c6],
+    vd = [d5]
+
+  expect(print(reorder(vb, [...vb, a0]))).toEqual('a0_2')
+  expect(print(reorder(vb, []))).toEqual('')
+
+  expect(print(reorder(vb, [c3, d5]))).toEqual('c3_0, d5_1')
+  expect(print(reorder(vc, [c3, d5]))).toEqual('d5_1')
+  expect(print(reorder(vc, [c6, c4, c3]))).toEqual('c6_0, c3_2')
+})

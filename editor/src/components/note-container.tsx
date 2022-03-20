@@ -1,10 +1,11 @@
 import { useObservable } from '@ngneat/react-rxjs'
 import React, { memo, useEffect } from 'react'
-import { blockRepo } from '../stores/block/block.repository'
+import { tap } from 'rxjs'
+import { blockRepo } from '../stores/block.repository'
 import { fetchNode, nodeEl$, syncTitle } from '../stores/node-el.repository'
-import { BlockEl } from './block/block-el'
+import { BlockContainer } from './block/block-container'
 
-// // Helpers
+// Helpers
 
 // // const handleNewFirstChildBlockClick = (parentUid) => {
 // //     const newUid = genBlockUid()
@@ -215,75 +216,72 @@ import { BlockEl } from './block/block-el'
 // //     )
 // // }
 
-// // const refComp = (block) => {
-// //     const state = atom({
-// //         block,
-// //         embedId: randomUUID(),
-// //         parents: block.parents
-// //     })
-// //     const linkedRefData = {
-// //         linkedRef: true,
-// //         initialOpen: true,
-// //         linkedRefUid: block.uid,
-// //         parentUids: block.parents.map(e => e.uid)
-// //     }
-// //     return () => {
-// //         const {block, parents, embedId} = state
-// //         const block = getReactiveBlockDocument(block.db.id)
-// //         return (
-// //             <>
-// //                 {breadcrumbsList}
-// //                 {parents.map(e => {
-// //                     const {title, string, uid} = e
-// //                     const breadcrumb = breadcrumb({
-// //                         key: `breadcrumb-${uid}`,
-// //                         onClick: () => {
-// //                             const newB = getBlock([':block/uid', uid])
-// //                             const newP = dropLast(parents)
-// //                             setState({
-// //                                 block: newB,
-// //                                 parents: newP
-// //                             })
-// //                         }
-// //                     })
-// //                     return (
-// //                         <>
-// //                             {breadcrumb}
-// //                             {parseAndRender(title || string, uid)}
-// //                         </>
-// //                     )
-// //                 })}
-// //             </>
-// //         )
-// //     }
-// // }
+// const refComp = (block) => {
+//     const state = atom({
+//         block,
+//         embedId: randomUUID(),
+//         parents: block.parents
+//     })
+//     const linkedRefData = {
+//         linkedRef: true,
+//         initialOpen: true,
+//         linkedRefUid: block.uid,
+//         parentUids: block.parents.map(e => e.uid)
+//     }
+//     return () => {
+//         const {block, parents, embedId} = state
+//         const block = getReactiveBlockDocument(block.db.id)
+//         return (
+//             <>
+//                 {breadcrumbsList}
+//                 {parents.map(e => {
+//                     const {title, string, uid} = e
+//                     const breadcrumb = breadcrumb({
+//                         key: `breadcrumb-${uid}`,
+//                         onClick: () => {
+//                             const newB = getBlock([':block/uid', uid])
+//                             const newP = dropLast(parents)
+//                             setState({
+//                                 block: newB,
+//                                 parents: newP
+//                             })
+//                         }
+//                     })
+//                     return (
+//                         <>
+//                             {breadcrumb}
+//                             {parseAndRender(title || string, uid)}
+//                         </>
+//                     )
+//                 })}
+//             </>
+//         )
+//     }
+// }
 
-const NodePageBlockChildrenEl = ({ uid }: { uid: string }): JSX.Element => {
+const NoteBlockChildren = ({ uid }: { uid: string }): JSX.Element => {
   const [children] = useObservable(blockRepo.getBlockChildren$(uid))
   return (
     <>
       {children.map(child => {
         const { uid } = child
-        return (
-          <div key={uid}>
-            <BlockEl uid={uid} />
-          </div>
-        )
+        return <BlockContainer key={uid} uid={uid} />
       })}
     </>
   )
 }
 
-export const NodePageEl = ({ ident }: { ident: string }): JSX.Element => {
+// const NoteContainer = ({ uid }: { uid: string }): JSX.Element => {}
+
+export const NotePage = ({ ident }: { ident: string }): JSX.Element => {
   // const [state, setState] = useState(initState)
   // const unlinkedRefs = atom([])
   // const blockUid = atom(null)
   // const [blockUid, setBlockUid] = useState<string | null>(null)
   const [nodeEl] = useObservable(nodeEl$)
-  // [children] = useObservable(blockRepo.getBlockChildren$(nodeEl.node?.block.uid))
 
   useEffect(() => {
-    console.log('fetchNode')
+    console.log('fetchNode(ident)')
     fetchNode(ident)
   }, [])
 
@@ -300,20 +298,12 @@ export const NodePageEl = ({ ident }: { ident: string }): JSX.Element => {
   // syncTitle('hello sync title')
 
   return (
-    <div data-uid={'uid'}>
+    <div className="note-page" data-uid={'uid'}>
       {/* {alertShow && <Dialog isOpen={true} title={message} onConfirm={confirmFn} onDismiss={cancelFn} />} */}
 
       <header />
 
       {nodeEl.title.local}
-
-      <button
-        onClick={() => {
-          syncTitle((nodeEl.title.local ?? 'x') + 'a')
-        }}
-      >
-        syncTitle
-      </button>
 
       {/* {menuDropdown(ndoe, dailyNote)} */}
 
@@ -342,21 +332,11 @@ export const NodePageEl = ({ ident }: { ident: string }): JSX.Element => {
         />
       </h1> */}
 
-      {nodeEl.node?.block.uid === undefined ? (
+      {nodeEl.node?.block.uid ? (
+        <NoteBlockChildren uid={nodeEl.node.block.uid} />
+      ) : (
         // <PlaceholderBlockEl uid={uid} />
         <span>PlaceholderBlockEl</span>
-      ) : (
-        // <>
-        //   {nodeEl.node.block.children.map(child => {
-        //     const { uid } = child
-        //     return (
-        //       <div key={uid}>
-        //         <BlockEl uid={uid} />
-        //       </div>
-        //     )
-        //   })}
-        // </>
-        <NodePageBlockChildrenEl uid={nodeEl.node.block.uid} />
       )}
     </div>
   )

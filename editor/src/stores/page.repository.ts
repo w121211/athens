@@ -1,4 +1,12 @@
-import { createStore, withProps, select, setProp, setProps, emitOnce, Reducer } from '@ngneat/elf'
+import {
+  createStore,
+  withProps,
+  select,
+  setProp,
+  setProps,
+  emitOnce,
+  Reducer,
+} from '@ngneat/elf'
 import {
   addEntities,
   deleteEntities,
@@ -28,15 +36,11 @@ import {
   switchMap,
   tap,
 } from 'rxjs'
+import { Page } from '../interfaces'
 import { genBlockUid } from '../utils'
-import { getBlock } from './block/block.repository'
+import { getBlock } from './block.repository'
 
-export type Page = {
-  title: string // as id
-  blockUid: string // corresponding block
-}
-
-const pagesStore = createStore(
+export const pagesStore = createStore(
   { name: 'pagesStore' },
   withEntities<Page, 'title'>({ idKey: 'title' }),
 )
@@ -44,14 +48,15 @@ const pagesStore = createStore(
 export function getPage(title: string): Page {
   const page = pagesStore.query(getEntity(title))
   if (page === undefined) {
-    throw 'getBlock::block === undefined' + title
+    console.error(title)
+    throw new Error('[getPage] title not found ')
   }
   return page
 }
 
-export function getPageTitle(blockUid: string): string | undefined {
+export function getPageTitle(blockUid: string): string | null {
   const block = getBlock(blockUid)
-  return block.pageTitle
+  return block.pageTitle ?? null
 }
 
 class PageRepository {

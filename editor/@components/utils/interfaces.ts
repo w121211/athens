@@ -1,97 +1,96 @@
 /**
  * The ID of a unique Athens block
  */
-type UID = string | number;
+type UID = string | number
 
 /**
  * A person interacting with Athens in a multiplayer context
  */
 type Person = {
-  personId: string;
-  username: string;
-  color: string; // CSS color
+  personId: string
+  username: string
+  color: string // CSS color
 }
 
 /**
  * OS the name of supported OSs
  */
-type OS = 'mac' | 'windows' | 'linux';
+type OS = 'mac' | 'windows' | 'linux'
 
 /**
  * The state of a session's connection to the Athens host
  */
-type ConnectionStatus = 'local' | 'connecting' | 'connected' | 'reconnecting' | 'offline';
+type ConnectionStatus = 'local' | 'connecting' | 'connected' | 'reconnecting' | 'offline'
 
-type HostAddress = string;
+type HostAddress = string
 
 /**
  * A knowledge graph
  */
 type Database = {
-  id: string;
-  name: string;
-  isRemote: boolean;
-  icon?: string; // Emoji
-  color?: string; // CSS color
+  id: string
+  name: string
+  isRemote: boolean
+  icon?: string // Emoji
+  color?: string // CSS color
 }
 
-type Synced = boolean;
-
+type Synced = boolean
 
 /**
  *  A Person associated with a specific Athens block in a multiplayer context
-*/
+ */
 type PersonPresence = Person & {
-  uid: UID;
+  uid: UID
 }
 
 /**
  *  A block
-*/
+ */
 type Block = {
   /**
    * The UID of this block
    */
-  uid: UID;
+  uid: UID
   /**
    * Children
    */
-  children?: any;
+  children?: any
   /**
    * Whether this block's children should be shown
    */
-  isOpen: boolean;
+  isOpen: boolean
   /**
    * The raw content of the block
    */
-  rawContent: string;
+  rawContent: string
   /**
    * The rendered content of the block
    */
-  renderedContent?: any;
+  renderedContent?: any
   /**
    * Whether the block is part of a user selection
    */
-  isSelected?: boolean;
+  isSelected?: boolean
   /**
    * Whether this block is locked
    */
-  isLocked?: boolean;
+  isLocked?: boolean
   /**
    * Whether this block is editable
    */
-  isEditable?: boolean;
+  isEditable?: boolean
   /**
    * Whether this block represents a checked checkbox
    */
-  isChecked?: boolean;
+  isChecked?: boolean
   /**
    * A user attached to this block
    */
-  presentUser?: PersonPresence;
+  presentUser?: PersonPresence
 }
 
 type BlockGraph = {
-  tree: any[],
-  blocks: any,
-};
+  tree: any[]
+  blocks: any
+}

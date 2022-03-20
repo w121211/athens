@@ -1,7 +1,6 @@
 import { addEntities } from '@ngneat/elf-entities'
 import { events } from '../../src/events'
-import { blockRepo, blocksStore, getBlock } from '../../src/stores/block/block.repository'
-import { Block } from '../../src/stores/block/types'
+import { blockRepo, blocksStore, getBlock } from '../../src/stores/block.repository'
 import { rfdbRepo } from '../../src/stores/rfdb.repository'
 
 const blocks: Block[] = [
@@ -15,7 +14,7 @@ beforeEach(() => {
   blockRepo.update([addEntities(blocks)])
 })
 
-it('enterNewBlock', () => {
+it('enterNewBlock()', () => {
   rfdbRepo.setProps({ editing: { uid: '0' } })
 
   const parent = blocks[0],
@@ -50,7 +49,7 @@ it('enterNewBlock, enterNewBlock, up', () => {
   // expect(rfdbRepo.getValue().editing?.uid).toEqual('1')
 })
 
-it(':up', () => {
+it('up()', () => {
   rfdbRepo.setProps({ editing: { uid: '1' } })
   events.up('0', 'end')
   expect(rfdbRepo.getValue().editing?.uid).toEqual('0')
@@ -75,19 +74,27 @@ it(':up', () => {
   // expect(insert(v, x, 'after', v[2])).toEqual([...v, x])
 })
 
-// it('reorder()', () => {
-//   const before: Block[] = [
-//     { uid: '1', str: '1', order: 0, parentUid: '1', childrenUids: [] },
-//     { uid: '2', str: '2', order: 1, parentUid: '1', childrenUids: [] },
-//     { uid: '3', str: '3', order: 2, parentUid: '1', childrenUids: [] },
-//   ]
-//   const after: Block[] = [
-//     { uid: '1', str: '1', order: 0, parentUid: '1', childrenUids: [] },
-//     { uid: '3', str: '3', order: 2, parentUid: '1', childrenUids: [] },
-//     { uid: '2', str: '2', order: 1, parentUid: '1', childrenUids: [] },
-//   ]
-//   // const after = [...before]
-//   // after[2].order = 3
+it('down()', () => {
+  rfdbRepo.setProps({ editing: { uid: '1' } })
+  events.up('0', 'end')
+  expect(rfdbRepo.getValue().editing?.uid).toEqual('0')
 
-//   expect(reorder(after, before)).toEqual([])
-// })
+  // const x = { uid: 'x', str: 'x', order: 0, parentUid: 'x', childrenUids: [] }
+
+  // expect(insert(v, x, 'first', v[0])).toEqual([x, ...v])
+  // expect(insert(v, x, 'first', v[1])).toEqual([x, ...v])
+  // expect(insert(v, x, 'first', v[2])).toEqual([x, ...v])
+
+  // expect(insert(v, x, 'last', v[0])).toEqual([...v, x])
+  // expect(insert(v, x, 'last', v[1])).toEqual([...v, x])
+  // expect(insert(v, x, 'last', v[2])).toEqual([...v, x])
+
+  // // console.log(insert(v, x, 'before', v[0]))
+  // expect(insert(v, x, 'before', v[0])).toEqual([x, ...v])
+  // expect(insert(v, x, 'before', v[1])).toEqual([v[0], x, v[1], v[2]])
+  // expect(insert(v, x, 'before', v[2])).toEqual([v[0], v[1], x, v[2]])
+
+  // expect(insert(v, x, 'after', v[0])).toEqual([v[0], x, v[1], v[2]])
+  // expect(insert(v, x, 'after', v[1])).toEqual([v[0], v[1], x, v[2]])
+  // expect(insert(v, x, 'after', v[2])).toEqual([...v, x])
+})

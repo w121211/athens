@@ -1,0 +1,107 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`enterNewBlock() 1`] = `
+Object {
+  "0": Object {
+    "childrenUids": Array [
+      "1",
+      "x",
+      "2",
+      "3",
+    ],
+    "editTime": 1647622347613,
+    "order": 0,
+    "parentUid": null,
+    "str": "0",
+    "uid": "0",
+  },
+  "1": Object {
+    "childrenUids": Array [],
+    "order": 0,
+    "parentUid": "0",
+    "str": "1",
+    "uid": "1",
+  },
+  "2": Object {
+    "childrenUids": Array [],
+    "order": 2,
+    "parentUid": "0",
+    "str": "2",
+    "uid": "2",
+  },
+  "3": Object {
+    "childrenUids": Array [],
+    "order": 3,
+    "parentUid": "0",
+    "str": "3",
+    "uid": "3",
+  },
+  "x": Object {
+    "childrenUids": Array [],
+    "editTime": 1647622347613,
+    "open": true,
+    "order": 1,
+    "parentUid": "0",
+    "str": "",
+    "uid": "x",
+  },
+}
+`;
+
+exports[`enterNewBlock, enterNewBlock, up 1`] = `
+Object {
+  "0": Object {
+    "childrenUids": Array [
+      "1",
+      "x",
+      "y",
+      "2",
+      "3",
+    ],
+    "editTime": 1647622347619,
+    "order": 0,
+    "parentUid": null,
+    "str": "0",
+    "uid": "0",
+  },
+  "1": Object {
+    "childrenUids": Array [],
+    "order": 0,
+    "parentUid": "0",
+    "str": "1",
+    "uid": "1",
+  },
+  "2": Object {
+    "childrenUids": Array [],
+    "order": 3,
+    "parentUid": "0",
+    "str": "2",
+    "uid": "2",
+  },
+  "3": Object {
+    "childrenUids": Array [],
+    "order": 4,
+    "parentUid": "0",
+    "str": "3",
+    "uid": "3",
+  },
+  "x": Object {
+    "childrenUids": Array [],
+    "editTime": 1647622347617,
+    "open": true,
+    "order": 1,
+    "parentUid": "0",
+    "str": "",
+    "uid": "x",
+  },
+  "y": Object {
+    "childrenUids": Array [],
+    "editTime": 1647622347619,
+    "open": true,
+    "order": 2,
+    "parentUid": "0",
+    "str": "",
+    "uid": "y",
+  },
+}
+`;

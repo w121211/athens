@@ -22,44 +22,7 @@ import {
   switchMap,
   tap,
 } from 'rxjs'
-import { blocksStore } from './block/block.repository'
-
-interface NodeProps {
-  db: {
-    id?: string
-  }
-  block: {
-    uid?: string
-    children?: { uid: string }[]
-  }
-  node: {
-    title?: string
-  }
-  page: {
-    sidebar?: false
-  }
-}
-
-// NodeEl store
-
-export interface NodeElProps {
-  menu: {
-    show: boolean
-  }
-  title: {
-    initial?: string
-    local?: string
-  }
-  alert: {
-    show?: null
-    message?: null
-    confirmFn?: null
-    cancelFn?: null
-  }
-  // LinkedReferences: true
-  // UnlinkedReferences: false
-  node?: NodeProps
-}
+import { blocksStore } from './block.repository'
 
 const nodeElStore = createStore(
   { name: 'nodeStateStore' },
@@ -106,7 +69,7 @@ export function fetchNode(ident: string) {
     db: {},
     block: {
       uid: '1',
-      children: [{ uid: '2' }, { uid: '3' }, { uid: '4' }],
+      // children: [{ uid: '2' }, { uid: '3' }, { uid: '4' }],
     },
     node: { title: 'hello world' + ident },
     page: {},

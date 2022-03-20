@@ -60,7 +60,8 @@ interface RfdbProps {
     items: []
   }
   selection: {
-    items: []
+    items: string[] // uids
+    // selected: (uid) => boolean
   }
   help: {
     open: false
@@ -74,9 +75,9 @@ interface RfdbProps {
   }
   connectionStatus: 'disconnected'
   //
-  selectSubs?: {
-    items?: []
-  }
+  // selectSubs?: {
+  //   items?: string[]
+  // }
   editing?: {
     uid: string | null
   }
@@ -116,8 +117,13 @@ class RfdbRepository {
   }
 
   getIsEditing(uid: string): boolean {
-    const value = rfdbStore.getValue()
+    const value = this.getValue()
     return value.editing?.uid === uid
+  }
+
+  getIsSelected(uid: string): boolean {
+    const value = this.getValue()
+    return value.selection?.items?.includes(uid)
   }
 
   getValue() {
@@ -133,6 +139,14 @@ class RfdbRepository {
 
   updateEditingUid(uid: string | null, charIndex?: 'end' | number) {
     rfdbStore.update(setProp('editing', { uid }))
+  }
+
+  updateMouseDown(mouseDown: boolean) {
+    rfdbStore.update(setProp('mouseDown', mouseDown))
+  }
+
+  updateSelectionItems(items: string[]) {
+    rfdbStore.update(setProp('selection', { items }))
   }
 }
 
