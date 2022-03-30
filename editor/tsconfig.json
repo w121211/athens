@@ -20,7 +20,16 @@
     }
   },
   "exclude": ["node_modules", ".next", "out", "dist", "@components"],
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js", "test", "src", "playground"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "test",
+    "src",
+    "playground",
+    "stories"
+  ],
   "ts-node": {
     "transpileOnly": true,
     // these options are overrides used only by ts-node

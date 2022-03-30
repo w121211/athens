@@ -10,7 +10,7 @@ export function destructKeyDown(e: KeyboardEvent) {
   return { keyCode: key, ctrl, meta, shift, alt }
 }
 
-// OS
+// ------ OS ------
 
 function getOS() {
   if (typeof window !== 'undefined') {
@@ -36,7 +36,7 @@ export function genBlockUid(): string {
   return '' + Math.floor(Math.random() * 1000)
 }
 
-// DOM
+// ------ DOM ------
 
 export function getDatasetUid(el: HTMLElement): string | null {
   const block = el && el.closest('.block-container'),
@@ -59,3 +59,10 @@ export function verticalCenter(el: Element) {
     y = (rect.bottom - rect.top) / 2
   return y
 }
+
+// ------ Regex ------
+
+/**
+ * Take a string and escape all regex special characters in it
+ */
+export function escapeStr() {}

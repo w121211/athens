@@ -1,6 +1,7 @@
 import { addEntities } from '@ngneat/elf-entities'
 import { diff } from 'deep-object-diff'
-import { BlockOp } from '../../src/op/ops'
+import { Block, Page } from '../../src/interfaces'
+import { blockNewOp } from '../../src/op/ops'
 import { blockRepo, blocksStore } from '../../src/stores/block.repository'
 import { pagesStore } from '../../src/stores/page.repository'
 import { clean } from '../helpers'
@@ -13,7 +14,14 @@ import { clean } from '../helpers'
  */
 
 const blocks: Block[] = [
-  { uid: '0', str: '0', order: 0, parentUid: null, childrenUids: ['1', '2'], pageTitle: 'page-0' },
+  {
+    uid: '0',
+    str: '0',
+    order: 0,
+    parentUid: null,
+    childrenUids: ['1', '2'],
+    pageTitle: 'page-0',
+  },
   { uid: '1', str: '1', order: 0, parentUid: '0', childrenUids: ['3'] },
   { uid: '2', str: '2', order: 1, parentUid: '0', childrenUids: [] },
   { uid: '3', str: '3', order: 0, parentUid: '1', childrenUids: [] },
@@ -26,24 +34,33 @@ beforeEach(() => {
 })
 
 it('blockNewOp() throws', () => {
-  const ops = new BlockOp()
-
   // require to use page-title for position
-  expect(() => ops.blockNewOp('x', { blockUid: '0', relation: 'first' })).toThrowError()
+  expect(() =>
+    blockNewOp('x', { blockUid: '0', relation: 'first' }),
+  ).toThrowError()
 
   // require page-repo to have corresponding page
-  expect(() => ops.blockNewOp('x', { pageTitle: 'page-0', relation: 'first' })).toThrowError()
+  expect(() =>
+    blockNewOp('x', { pageTitle: 'page-0', relation: 'first' }),
+  ).toThrowError()
   pagesStore.update(addEntities([page]))
 
   // thrown: "Location uid is a page, location must use title instead."
-  expect(() => ops.blockNewOp('x', { blockUid: '0', pageTitle: 'page-0', relation: 'first' })).toThrowError()
+  expect(() =>
+    blockNewOp('x', {
+      blockUid: '0',
+      pageTitle: 'page-0',
+      relation: 'first',
+    }),
+  ).toThrowError()
 
   // thrown: "Given uid is not unique"
-  expect(() => ops.blockNewOp('1', { blockUid: '2', relation: 'first' })).toThrowError()
+  expect(() =>
+    blockNewOp('1', { blockUid: '2', relation: 'first' }),
+  ).toThrowError()
 })
 
 it('blockNewOp() ', () => {
-  const ops = new BlockOp()
   let cur, next, op
 
   /**
@@ -54,7 +71,9 @@ it('blockNewOp() ', () => {
    *  - 2
    */
   cur = blocksStore.getValue().entities
-  blocksStore.update(...ops.blockNewOp('x1', { pageTitle: 'page-0', relation: 'first' }))
+  blocksStore.update(
+    ...blockNewOp('x1', { pageTitle: 'page-0', relation: 'first' }),
+  )
   next = clean(blocksStore.getValue().entities)
   expect(diff(cur, next)).toMatchInlineSnapshot(`
      Object {
@@ -91,7 +110,7 @@ it('blockNewOp() ', () => {
    *  - 2
    */
   cur = next
-  blocksStore.update(...ops.blockNewOp('x2', { blockUid: 'x1', relation: 'first' }))
+  blocksStore.update(...blockNewOp('x2', { blockUid: 'x1', relation: 'first' }))
   next = clean(blocksStore.getValue().entities)
   expect(diff(cur, next)).toMatchInlineSnapshot(`
     Object {
@@ -121,7 +140,7 @@ it('blockNewOp() ', () => {
    *  - 2
    */
   cur = next
-  blocksStore.update(...ops.blockNewOp('x3', { blockUid: '1', relation: 'last' }))
+  blocksStore.update(...blockNewOp('x3', { blockUid: '1', relation: 'last' }))
   next = clean(blocksStore.getValue().entities)
   expect(diff(cur, next)).toMatchInlineSnapshot(`
      Object {
@@ -152,7 +171,7 @@ it('blockNewOp() ', () => {
    *   - x4*
    */
   cur = next
-  blocksStore.update(...ops.blockNewOp('x4', { blockUid: '2', relation: 'last' }))
+  blocksStore.update(...blockNewOp('x4', { blockUid: '2', relation: 'last' }))
   next = clean(blocksStore.getValue().entities)
   expect(diff(cur, next)).toMatchInlineSnapshot(`
     Object {
@@ -184,7 +203,7 @@ it('blockNewOp() ', () => {
    *   - x4
    */
   cur = next
-  blocksStore.update(...ops.blockNewOp('x5', { blockUid: '1', relation: 'before' }))
+  blocksStore.update(...blockNewOp('x5', { blockUid: '1', relation: 'before' }))
   next = clean(blocksStore.getValue().entities)
   expect(diff(cur, next)).toMatchInlineSnapshot(`
     Object {
@@ -225,7 +244,9 @@ it('blockNewOp() ', () => {
    *   - x4
    */
   cur = next
-  blocksStore.update(...ops.blockNewOp('x6', { blockUid: 'x1', relation: 'before' }))
+  blocksStore.update(
+    ...blockNewOp('x6', { blockUid: 'x1', relation: 'before' }),
+  )
   next = clean(blocksStore.getValue().entities)
   expect(diff(cur, next)).toMatchInlineSnapshot(`
     Object {
@@ -275,7 +296,7 @@ it('blockNewOp() ', () => {
    *   - x4
    */
   cur = next
-  blocksStore.update(...ops.blockNewOp('x7', { blockUid: 'x2', relation: 'after' }))
+  blocksStore.update(...blockNewOp('x7', { blockUid: 'x2', relation: 'after' }))
   next = clean(blocksStore.getValue().entities)
   expect(diff(cur, next)).toMatchInlineSnapshot(`
     Object {
@@ -310,7 +331,9 @@ it('blockNewOp() ', () => {
    *   - x4
    */
   cur = next
-  blocksStore.update(...ops.blockNewOp('x8', { blockUid: 'x7', relation: 'before' }))
+  blocksStore.update(
+    ...blockNewOp('x8', { blockUid: 'x7', relation: 'before' }),
+  )
   next = clean(blocksStore.getValue().entities)
   expect(diff(cur, next)).toMatchInlineSnapshot(`
     Object {
@@ -350,7 +373,7 @@ it('blockNewOp() ', () => {
    *   - x4
    */
   cur = next
-  blocksStore.update(...ops.blockNewOp('x9', { blockUid: 'x8', relation: 'after' }))
+  blocksStore.update(...blockNewOp('x9', { blockUid: 'x8', relation: 'after' }))
   next = clean(blocksStore.getValue().entities)
   expect(diff(cur, next)).toMatchInlineSnapshot(`
     Object {

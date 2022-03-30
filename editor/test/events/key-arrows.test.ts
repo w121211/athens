@@ -1,10 +1,21 @@
 import { addEntities } from '@ngneat/elf-entities'
-import { events } from '../../src/events'
-import { blockRepo, blocksStore, getBlock } from '../../src/stores/block.repository'
+import {} from '../../src/events'
+import { Block } from '../../src/interfaces'
+import {
+  blockRepo,
+  blocksStore,
+  getBlock,
+} from '../../src/stores/block.repository'
 import { rfdbRepo } from '../../src/stores/rfdb.repository'
 
 const blocks: Block[] = [
-  { uid: '0', str: '0', order: 0, parentUid: null, childrenUids: ['1', '2', '3'] },
+  {
+    uid: '0',
+    str: '0',
+    order: 0,
+    parentUid: null,
+    childrenUids: ['1', '2', '3'],
+  },
   { uid: '1', str: '1', order: 0, parentUid: '0', childrenUids: [] },
   { uid: '2', str: '2', order: 1, parentUid: '0', childrenUids: [] },
   { uid: '3', str: '3', order: 2, parentUid: '0', childrenUids: [] },

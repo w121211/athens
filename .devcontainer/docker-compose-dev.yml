@@ -2,7 +2,7 @@ version: "2"
 services:
   athens-app:
     volumes:
-      - app-sync:/workspace:nocopy # nocopy is important
+      - athens-app-sync:/workspace:nocopy # nocopy is important
 volumes:
-  app-sync:
+  athens-app-sync:
     external: true

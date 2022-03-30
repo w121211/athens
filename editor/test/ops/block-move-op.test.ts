@@ -1,8 +1,8 @@
-import { addEntities, getAllEntities, setEntities } from '@ngneat/elf-entities'
+import { setEntities } from '@ngneat/elf-entities'
 import { validateChildrenUids } from '../../src/op/helpers'
 import { blockMoveOp } from '../../src/op/ops'
 import { blockRepo, blocksStore } from '../../src/stores/block.repository'
-import { blocks, getAllBlockUids } from '../helpers'
+import { blocks } from '../helpers'
 
 // jest.spyOn(console, 'error')
 // // @ts-ignore jest.spyOn adds this functionallity
@@ -134,134 +134,6 @@ it('blockMoveOp() move freely', () => {
     .toMatchInlineSnapshot(`
     Array [
       "b1",
-    ]
-  `)
-})
-
-it('blockMoveOp() :before a sibling-descendat', () => {
-  /**
-   *  a0
-   *  - b1
-   *    - &&
-   *    - c3
-   *       -d5
-   *    - c4
-   *    - c6
-   *  - b2*
-   *
-   */
-  blocksStore.update(...blockMoveOp(b2, { blockUid: 'c3', relation: 'before' }))
-  expect(() =>
-    validateChildrenUids(blocksStore.getValue().entities),
-  ).not.toThrow()
-  expect(blocksStore.getValue().entities['a0'].childrenUids)
-    .toMatchInlineSnapshot(`
-    Array [
-      "b1",
-    ]
-  `)
-  expect(blocksStore.getValue().entities['b1'].childrenUids)
-    .toMatchInlineSnapshot(`
-    Array [
-      "b2",
-      "c3",
-      "c4",
-      "c6",
-    ]
-  `)
-})
-
-it('blockMoveOp() :after a sibling-descendat', () => {
-  /**
-   *  a0
-   *  - b1
-   *    - c3
-   *       -d5
-   *    - &&
-   *    - c4
-   *    - c6
-   *  - b2*
-   *
-   */
-  blocksStore.update(...blockMoveOp(b2, { blockUid: 'c3', relation: 'after' }))
-  expect(() =>
-    validateChildrenUids(blocksStore.getValue().entities),
-  ).not.toThrow()
-  expect(blocksStore.getValue().entities['a0'].childrenUids)
-    .toMatchInlineSnapshot(`
-    Array [
-      "b1",
-    ]
-  `)
-  expect(blocksStore.getValue().entities['b1'].childrenUids)
-    .toMatchInlineSnapshot(`
-    Array [
-      "c3",
-      "b2",
-      "c4",
-      "c6",
-    ]
-  `)
-})
-
-it('blockMoveOp() :first a sibling-descendat', () => {
-  /**
-   *  a0
-   *  - b1
-   *    - c3
-   *      - &&
-   *       -d5
-   *    - c4
-   *    - c6
-   *  - b2*
-   *
-   */
-  blocksStore.update(...blockMoveOp(b2, { blockUid: 'c3', relation: 'first' }))
-  expect(() =>
-    validateChildrenUids(blocksStore.getValue().entities),
-  ).not.toThrow()
-  expect(blocksStore.getValue().entities['a0'].childrenUids)
-    .toMatchInlineSnapshot(`
-    Array [
-      "b1",
-    ]
-  `)
-  expect(blocksStore.getValue().entities['c3'].childrenUids)
-    .toMatchInlineSnapshot(`
-    Array [
-      "b2",
-      "d5",
-    ]
-  `)
-})
-
-it('blockMoveOp() :last a sibling-descendat', () => {
-  /**
-   *  a0
-   *  - b1
-   *    - c3
-   *       -d5
-   *      - &&
-   *    - c4
-   *    - c6
-   *  - b2*
-   *
-   */
-  blocksStore.update(...blockMoveOp(b2, { blockUid: 'c3', relation: 'last' }))
-  expect(() =>
-    validateChildrenUids(blocksStore.getValue().entities),
-  ).not.toThrow()
-  expect(blocksStore.getValue().entities['a0'].childrenUids)
-    .toMatchInlineSnapshot(`
-    Array [
-      "b1",
-    ]
-  `)
-  expect(blocksStore.getValue().entities['c3'].childrenUids)
-    .toMatchInlineSnapshot(`
-    Array [
-      "d5",
-      "b2",
     ]
   `)
 })
@@ -508,6 +380,122 @@ it('blockMoveOp() :last an ancestor', () => {
   `)
 })
 
+it('blockMoveOp() :before a sibling', () => {
+  /**
+   *  a0
+   *  - b1
+   *    - &&
+   *    - c3
+   *       - d5
+   *    - c4*
+   *    - c6
+   *  - b2
+   *
+   */
+  blocksStore.update(...blockMoveOp(c4, { blockUid: 'c3', relation: 'before' }))
+  expect(() =>
+    validateChildrenUids(blocksStore.getValue().entities),
+  ).not.toThrow()
+  expect(blocksStore.getValue().entities['b1'].childrenUids)
+    .toMatchInlineSnapshot(`
+    Array [
+      "c4",
+      "c3",
+      "c6",
+    ]
+  `)
+})
+
+it('blockMoveOp() :after a sibling', () => {
+  /**
+   *  a0
+   *  - b1
+   *    - c3
+   *       - d5
+   *    - c4*
+   *    - &&
+   *    - c6
+   *  - b2
+   *
+   */
+  blocksStore.update(...blockMoveOp(c4, { blockUid: 'c3', relation: 'after' }))
+  expect(() =>
+    validateChildrenUids(blocksStore.getValue().entities),
+  ).not.toThrow()
+  expect(blocksStore.getValue().entities['b1'].childrenUids)
+    .toMatchInlineSnapshot(`
+    Array [
+      "c3",
+      "c4",
+      "c6",
+    ]
+  `)
+})
+
+it('blockMoveOp() :first a sibling', () => {
+  /**
+   *  a0
+   *  - b1
+   *    - c3
+   *       - &&
+   *       - d5
+   *    - c4*
+   *    - c6
+   *  - b2
+   *
+   */
+  blocksStore.update(...blockMoveOp(c4, { blockUid: 'c3', relation: 'first' }))
+  expect(() =>
+    validateChildrenUids(blocksStore.getValue().entities),
+  ).not.toThrow()
+  expect(blocksStore.getValue().entities['b1'].childrenUids)
+    .toMatchInlineSnapshot(`
+    Array [
+      "c3",
+      "c6",
+    ]
+  `)
+  expect(blocksStore.getValue().entities['c3'].childrenUids)
+    .toMatchInlineSnapshot(`
+    Array [
+      "c4",
+      "d5",
+    ]
+  `)
+})
+
+it('blockMoveOp() :last a sibling', () => {
+  /**
+   *  a0
+   *  - b1
+   *    - c3
+   *       - d5
+   *       - &&
+   *    - c4*
+   *    - c6
+   *  - b2
+   *
+   */
+  blocksStore.update(...blockMoveOp(c4, { blockUid: 'c3', relation: 'last' }))
+  expect(() =>
+    validateChildrenUids(blocksStore.getValue().entities),
+  ).not.toThrow()
+  expect(blocksStore.getValue().entities['b1'].childrenUids)
+    .toMatchInlineSnapshot(`
+    Array [
+      "c3",
+      "c6",
+    ]
+  `)
+  expect(blocksStore.getValue().entities['c3'].childrenUids)
+    .toMatchInlineSnapshot(`
+    Array [
+      "d5",
+      "c4",
+    ]
+  `)
+})
+
 it('blockMoveOp() :before a sibling ancestor', () => {
   /**
    *  a0
@@ -621,118 +609,130 @@ it('blockMoveOp() :last a sibling ancestor', () => {
   `)
 })
 
-it('blockMoveOp() :before a sibling', () => {
+it('blockMoveOp() :before a sibling-descendat', () => {
   /**
    *  a0
    *  - b1
    *    - &&
    *    - c3
-   *       - d5
-   *    - c4*
+   *       -d5
+   *    - c4
    *    - c6
-   *  - b2
+   *  - b2*
    *
    */
-  blocksStore.update(...blockMoveOp(c4, { blockUid: 'c3', relation: 'before' }))
+  blocksStore.update(...blockMoveOp(b2, { blockUid: 'c3', relation: 'before' }))
   expect(() =>
     validateChildrenUids(blocksStore.getValue().entities),
   ).not.toThrow()
+  expect(blocksStore.getValue().entities['a0'].childrenUids)
+    .toMatchInlineSnapshot(`
+    Array [
+      "b1",
+    ]
+  `)
   expect(blocksStore.getValue().entities['b1'].childrenUids)
     .toMatchInlineSnapshot(`
     Array [
-      "c4",
+      "b2",
       "c3",
+      "c4",
       "c6",
     ]
   `)
 })
 
-it('blockMoveOp() :after a sibling', () => {
+it('blockMoveOp() :after a sibling-descendat', () => {
   /**
    *  a0
    *  - b1
    *    - c3
-   *       - d5
-   *    - c4*
+   *       -d5
    *    - &&
+   *    - c4
    *    - c6
-   *  - b2
+   *  - b2*
    *
    */
-  blocksStore.update(...blockMoveOp(c4, { blockUid: 'c3', relation: 'after' }))
+  blocksStore.update(...blockMoveOp(b2, { blockUid: 'c3', relation: 'after' }))
   expect(() =>
     validateChildrenUids(blocksStore.getValue().entities),
   ).not.toThrow()
+  expect(blocksStore.getValue().entities['a0'].childrenUids)
+    .toMatchInlineSnapshot(`
+    Array [
+      "b1",
+    ]
+  `)
   expect(blocksStore.getValue().entities['b1'].childrenUids)
     .toMatchInlineSnapshot(`
     Array [
       "c3",
+      "b2",
       "c4",
       "c6",
     ]
   `)
 })
 
-it('blockMoveOp() :first a sibling', () => {
+it('blockMoveOp() :first a sibling-descendat', () => {
   /**
    *  a0
    *  - b1
    *    - c3
-   *       - &&
-   *       - d5
-   *    - c4*
+   *      - &&
+   *       -d5
+   *    - c4
    *    - c6
-   *  - b2
+   *  - b2*
    *
    */
-  blocksStore.update(...blockMoveOp(c4, { blockUid: 'c3', relation: 'first' }))
+  blocksStore.update(...blockMoveOp(b2, { blockUid: 'c3', relation: 'first' }))
   expect(() =>
     validateChildrenUids(blocksStore.getValue().entities),
   ).not.toThrow()
-  expect(blocksStore.getValue().entities['b1'].childrenUids)
+  expect(blocksStore.getValue().entities['a0'].childrenUids)
     .toMatchInlineSnapshot(`
     Array [
-      "c3",
-      "c6",
+      "b1",
     ]
   `)
   expect(blocksStore.getValue().entities['c3'].childrenUids)
     .toMatchInlineSnapshot(`
     Array [
-      "c4",
+      "b2",
       "d5",
     ]
   `)
 })
 
-it('blockMoveOp() :last a sibling', () => {
+it('blockMoveOp() :last a sibling-descendat', () => {
   /**
    *  a0
    *  - b1
    *    - c3
-   *       - d5
-   *       - &&
-   *    - c4*
+   *       -d5
+   *      - &&
+   *    - c4
    *    - c6
-   *  - b2
+   *  - b2*
    *
    */
-  blocksStore.update(...blockMoveOp(c4, { blockUid: 'c3', relation: 'last' }))
+  blocksStore.update(...blockMoveOp(b2, { blockUid: 'c3', relation: 'last' }))
   expect(() =>
     validateChildrenUids(blocksStore.getValue().entities),
   ).not.toThrow()
-  expect(blocksStore.getValue().entities['b1'].childrenUids)
+  expect(blocksStore.getValue().entities['a0'].childrenUids)
     .toMatchInlineSnapshot(`
     Array [
-      "c3",
-      "c6",
+      "b1",
     ]
   `)
   expect(blocksStore.getValue().entities['c3'].childrenUids)
     .toMatchInlineSnapshot(`
     Array [
       "d5",
-      "c4",
+      "b2",
     ]
   `)
 })

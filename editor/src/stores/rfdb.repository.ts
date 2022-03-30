@@ -1,26 +1,5 @@
 import { createStore, withProps, select, setProp, setProps } from '@ngneat/elf'
-import {
-  getEntity,
-  selectAllEntities,
-  selectEntities,
-  selectEntity,
-  selectManyByPredicate,
-  setEntities,
-  updateEntities,
-  upsertEntities,
-  withEntities,
-} from '@ngneat/elf-entities'
-import {
-  combineLatest,
-  combineLatestWith,
-  distinctUntilChanged,
-  forkJoin,
-  map,
-  Observable,
-  of,
-  switchMap,
-  tap,
-} from 'rxjs'
+import { distinctUntilChanged, map, tap } from 'rxjs'
 
 interface RfdbProps {
   db: {
@@ -28,7 +7,7 @@ interface RfdbProps {
     mtime: null
   }
   currentRoute?: {
-    uid: string | null
+    uid: string | null // current root uid
   }
   loading: true
   modal: false
@@ -78,7 +57,7 @@ interface RfdbProps {
   // selectSubs?: {
   //   items?: string[]
   // }
-  editing?: {
+  editing: {
     uid: string | null
   }
 }
@@ -87,30 +66,72 @@ export const rfdbStore = createStore(
   { name: 'rfdbStore' },
   // withEntities<BlockProps, 'uid'>({ idKey: 'uid' }),
   withProps<RfdbProps>({
-    menu: {
-      show: false,
+    db: {
+      synced: true,
+      mtime: null,
     },
-    title: {
-      // initial: undefined,
-      // local: undefined,
+    currentRoute: {
+      uid: null,
     },
-    alert: {
-      // show: undefined,
-      // message: undefined,
-      // confirmFn: undefined,
-      // cancelFn: undefined,
+    loading: true,
+    modal: false,
+    alert: null,
+    win: {
+      maximized: false,
+      fullscreen: false,
+      focused: true,
+    },
+    athena: {
+      open: false,
+      recentItems: [],
+    },
+    devtool: {
+      open: false,
+    },
+    leftSidebar: {
+      open: false,
+    },
+    rightSidebar: {
+      open: false,
+      items: {
+        //
+      },
+      width: 32,
+    },
+    mouseDown: false,
+    dailyNotes: {
+      items: [],
+    },
+    selection: {
+      items: [], // uids,
+      // selected: (uid) => boolean
+    },
+    help: {
+      open: false,
+    },
+    zoomLevel: 0,
+    fs: {
+      watcher: null,
+    },
+    presence: {
+      //
+    },
+    connectionStatus: 'disconnected',
+    //
+    // selectSubs?: {
+    //   items?: string[]
+    // }
+    editing: {
+      uid: null,
     },
   }),
 )
 
-// export const rfdb$ = rfdbStore.pipe(select(state => state))
-
-// export const updateRFDBProps = (state: Partial<RFDBProps>) => {
-//   rfdbStore.update(setProps(state))
-// }
-
 class RfdbRepository {
-  editingUid$ = rfdbStore.pipe(select(state => state.editing?.uid))
+  editingUid$ = rfdbStore.pipe(
+    select((state) => state.editing?.uid),
+    tap((e) => console.log(`editingUid: ${e}`)),
+  )
 
   setProps(props: Partial<RfdbProps>) {
     rfdbStore.update(setProps(props))
@@ -132,7 +153,7 @@ class RfdbRepository {
 
   getBlockIsEditing$(uid: string) {
     return this.editingUid$.pipe(
-      map(x => x === uid),
+      map((e) => e === uid),
       distinctUntilChanged(),
     )
   }

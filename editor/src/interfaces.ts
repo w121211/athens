@@ -1,43 +1,68 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 /**
  * Component properties
  *
  */
+
+// block-el-state
+
 export type SearchType = 'page' | 'slash' | 'hashtag' | 'template'
 
 export type DragTarget = 'first' | 'before' | 'after'
 
-export type BlockElState = {
-  // uid: string
-  str: {
-    local: string | null
-    previous: string | null
-    saveFn?: () => void
-    idleFn?: () => void
-  }
-  search: {
-    type: SearchType | null
-    index: number
-    query: string
-    results: string[]
-  }
-  dragging?: boolean
-  dragTarget: DragTarget | null
-  lastKeydown?: DestructTextareaKeyEvent | null
-  contextMenu?: {
-    x: null
-    y: null
-    show: boolean
-  }
-  createPosition?: {
-    top: number
-    left: number
-  }
-  showEditableDom: boolean
+export type Search = {
+  type: SearchType | null
+  index: number | null // search-hit index
+  query: string | null // search-term
+  results: {
+    nodeTitle?: string
+    blockStr?: string
+    blockUid?: string
+  }[]
 }
 
-export type BlockElStateSetFn = React.Dispatch<React.SetStateAction<BlockElState>>
+export type CaretPosition = {
+  top: number
+  left: number
+  height: number
+}
+
+// export type BlockElState = {
+//   // uid: string
+//   str: {
+//     local: string | null
+//     previous: string | null
+//     saveFn?: () => void
+//     idleFn?: () => void
+//   }
+//   search: {
+//     type: SearchType | null
+//     index: number | null // search-hit index
+//     query: string | null // search-term
+//     results: {
+//       nodeTitle?: string
+//       blockStr?: string
+//       blockUid?: string
+//     }[]
+//   }
+//   dragging?: boolean
+//   dragTarget: DragTarget | null
+//   lastKeydown?: DestructTextareaKeyEvent | null
+//   contextMenu?: {
+//     x: null
+//     y: null
+//     show: boolean
+//   }
+//   showEditableDom: boolean
+//   caretPosition: {
+//     top: number
+//     left: number
+//     height: number
+//   }
+// }
+
+// export type BlockElStateSetFn = React.Dispatch<
+//   React.SetStateAction<BlockElState>
+// >
 
 export type NodeProps = {
   db: {

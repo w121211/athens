@@ -15,7 +15,8 @@
     "**/.next": true,
     "**/__deprecated__/**": true,
     "**/__generated__/**": true,
-    "**/dist": true
+    "**/dist": true,
+    "**/gen": true
   },
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",

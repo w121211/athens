@@ -48,6 +48,8 @@ type BlockState = {
 
 export type BlockReducer = Reducer<BlockState>
 
+export type BlockReducerFn = () => BlockReducer[]
+
 // Store & Getters
 
 export const blocksStore = createStore(
@@ -60,7 +62,7 @@ export function getBlock(uid: string): Block {
 
   if (block === undefined) {
     console.error(uid)
-    throw new Error('[getBlock] Block not found')
+    throw new Error('[getBlock] Block not found' + uid)
   }
   return block
 }
@@ -76,7 +78,7 @@ class BlockRepository {
   getBlock$(uid: string) {
     return blocksStore.pipe(
       selectEntity(uid),
-      tap((v) => console.log(`block   ${v ? v.uid + '-' + v.str : v}`)),
+      // tap((v) => console.log(`block   ${v ? v.uid + '-' + v.str : v}`)),
     )
   }
 
@@ -109,9 +111,9 @@ class BlockRepository {
    *
    * TODO: undo/redo
    */
-  updateConsequently(consequenceOps: BlockReducer[][]) {
-    for (const op of consequenceOps) {
-      blocksStore.update(...op)
+  updateInChain(chainOpFns: BlockReducerFn[]) {
+    for (const fn of chainOpFns) {
+      blocksStore.update(...fn())
     }
   }
 }

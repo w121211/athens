@@ -1,14 +1,13 @@
 import { MouseEvent } from 'react'
 import { KeyboardEvent } from 'react'
-import { dispatch } from './events'
 import { rfdbStore } from './stores/rfdb.repository'
 import { destructKeyDown, shortcutKey } from './utils'
 
-const multiBlockSelection = e => {
+function multiBlockSelection(event: globalThis.KeyboardEvent) {
   const selectedItems = subscribe('select-subs/items')
   if (!empty(selectedItems)) {
-    const shift = e.shiftKey,
-      keyCode = e.keyCode,
+    const shift = event.shiftKey,
+      keyCode = event.keyCode,
       enter = keyCode === 'KeyCodes.ENTER',
       bksp = keyCode === 'KeyCodes.BACKSPACE',
       up = keyCode === 'KeyCodes.UP',
@@ -43,19 +42,20 @@ const multiBlockSelection = e => {
   }
 }
 
-function unfocus(e: MouseEvent) {
+function unfocus(event: globalThis.MouseEvent) {
   // const selectedItems = empty(subscribe('select-subs/items')),
   //   editingUid = subscribe('editing/uid'),
   const rfdb = rfdbStore.getValue(),
     selectedItems = rfdb.selectSubs?.items,
     editingUid = rfdb.editing?.uid,
-    target = e.target as HTMLElement,
+    target = event.target as HTMLElement,
     closestBlock = target.closest('.block-content'),
     closestBlockHeader = target.closest('.block-header'),
     closestPageHeader = target.closest('.page-header'),
     closestBullet = target.closest('.anchor'),
     closestDropdown = target.closest('#dropdown-menu'),
-    closest = closestBlock ?? closestBlockHeader ?? closestPageHeader ?? closestDropdown
+    closest =
+      closestBlock ?? closestBlockHeader ?? closestPageHeader ?? closestDropdown
 
   if (selectedItems && closestBullet === null) {
     // dispatch('select-events/clear')
@@ -68,9 +68,9 @@ function unfocus(e: MouseEvent) {
 
 // Hotkeys
 
-function keyDown(e: KeyboardEvent) {
-  const destructKeys = destructKeyDown(e),
-    { keyCode, ctrl, meta, shift, alt } = destructKeys
+function keyDown(event: globalThis.KeyboardEvent) {
+  const dKeyDown = destructKeyDown(event as unknown as KeyboardEvent),
+    { keyCode, ctrl, meta, shift, alt } = dKeyDown
   // editingUid = subscribe('editing/uid')
 
   // if (navigateKey(destructKeys)) {
@@ -133,12 +133,14 @@ function keyDown(e: KeyboardEvent) {
 
 const unformatDoubleBrackets = () => {}
 
-const blockRefsToPlainText = s => {}
+const blockRefsToPlainText = (s) => {}
 
 const blocksToClipboardData = (depth, node, unformat = false) => {
   const { string: _string, children, _header } = node.block,
     leftOffset = '    '.repeat(depth),
-    walkChildren = children.map(e => blocksToClipboardData(depth++, e, unformat)),
+    walkChildren = children.map((e) =>
+      blocksToClipboardData(depth++, e, unformat),
+    ),
     // string = unformat ? _string
     dash = unformat ? '' : '- '
   return leftOffset + dash + string + '\n' + walkChildren
@@ -148,8 +150,8 @@ const copy = (js, e) => {
   const uids = subscribe('::select-subs/items')
   if (!empty(uids)) {
     const copyData = uids
-        .map(e => getReactiveBlockDocument(dsdb, [':block/uid', e]))
-        .map(e => blocksToClipboardData(0, e))
+        .map((e) => getReactiveBlockDocument(dsdb, [':block/uid', e]))
+        .map((e) => blocksToClipboardData(0, e))
         .join(),
       clipboardData = e.event_.clipboardData,
       copiedBlocks = mapv(() => {
@@ -157,7 +159,10 @@ const copy = (js, e) => {
       })
 
     clipboardData.setData('text/plain', copyData)
-    clipboardData.setData('application/athens-representation', prStr(copiedBlocks))
+    clipboardData.setData(
+      'application/athens-representation',
+      prStr(copiedBlocks),
+    )
     clipboardData.setData('application/athens', prStr({ uids }))
 
     e.preventDefault()
@@ -175,7 +180,7 @@ const cut = (js, e) => {
 const forceLeave = atom(false)
 
 const preventSave = () => {
-  window.addEventListener('beforeunload', e => {
+  window.addEventListener('beforeunload', (e) => {
     const synced = subscribe(':db/synced'),
       e2eIgnoreSave = localStorage.getItem('E2E_IGNORE_SAVE') === 'true'
     if (!synced && !forceLeave && !e2eIgnoreSave) {
@@ -190,13 +195,14 @@ const preventSave = () => {
         },
       )
       e.preventDefault()
-      e.returnValue = 'Setting e.returnValue to string prevents exit for some browsers.'
+      e.returnValue =
+        'Setting e.returnValue to string prevents exit for some browsers.'
       return 'Returning a string also prevents exit on other browsers.'
     }
   })
 }
 
-const init = () => {
+function init() {
   document.addEventListener('mousedown', unfocus)
   window.addEventListener('keydown', multiBlockSelection)
   window.addEventListener('keydown', keyDown)

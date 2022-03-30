@@ -1,9 +1,5 @@
 import { Block } from '../interfaces'
-import {
-  blocksStore,
-  getBlock,
-  getBlockChildren,
-} from '../stores/block.repository'
+import { getBlock, getBlockChildren } from '../stores/block.repository'
 
 // export function uidAndEmbedId(uid: string) {
 //   const reUid = /^(.+)-embed-(.+)/,
@@ -36,7 +32,7 @@ function deepestChildBlock(block: Block): Block {
     return block
   }
 
-  const child = getBlock(childrenUids[childrenUids.length])
+  const child = getBlock(childrenUids[childrenUids.length - 1])
   return deepestChildBlock(child)
 }
 
@@ -53,7 +49,6 @@ export function nextBlock(block: Block, selection?: true): Block | null {
     return nextSibling
   }
 
-  // const nextBlock =
   const { open, pageTitle, childrenUids } = block
   if ((open || pageTitle) && childrenUids.length > 0) {
     return getBlock(childrenUids[0])
@@ -89,6 +84,9 @@ export function nthSiblingBlock(
   parent: Block,
   n: number,
 ): Block | null {
+  if (block.parentUid !== parent.uid)
+    throw new Error('[nthSiblingBlock] block.parentUid !== parent.uid')
+
   const findOrder = block.order + n,
     sibUid = parent.childrenUids[findOrder]
 

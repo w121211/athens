@@ -4,15 +4,29 @@
 # ```
 # $ docker-sync start --config=docker-sync.arm64.yml
 # ```
-version: '2'
+version: "2"
 options:
   verbose: true
-  compose-file-path: './.devcontainer/docker-compose.yml'
-  compose-dev-file-path: './.devcontainer/docker-compose-dev.yml'
+  compose-file-path: "./.devcontainer/docker-compose.yml"
+  compose-dev-file-path: "./.devcontainer/docker-compose-dev.yml"
 syncs:
-  app-sync: # tip: add -sync and you keep consistent names as a convention
-    sync_strategy: 'unison'
-    unison_image: 'eugenmayer/unison:2.51.3-4.12.0-ARM64'
+  athens-app-sync: # tip: add -sync and you keep consistent names as a convention
+    sync_strategy: "unison"
+    unison_image: "eugenmayer/unison:2.51.3-4.12.0-ARM64"
     notify_terminal: true
-    src: '.'
-    sync_excludes: ['node_modules', 'build', '.next', '__generated__', '.DS_Store', 'dist', '.cache']
+    src: "."
+    sync_excludes:
+      [
+        "node_modules",
+        "build",
+        ".next",
+        "__generated__",
+        ".DS_Store",
+        "dist",
+        ".cache",
+        ".calva",
+        ".clj-kondo",
+        ".cpcahe",
+        ".lsp",
+        ".shadow-cljs",
+      ]

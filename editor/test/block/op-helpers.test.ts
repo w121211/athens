@@ -1,6 +1,11 @@
 import { addEntities } from '@ngneat/elf-entities'
 import { blockRepo } from '../../src/stores/block.repository'
-import { getNextBlock, getNthSiblingBlock, getPrevBlock } from '../../src/op/helpers'
+import {
+  getNextBlock,
+  getNthSiblingBlock,
+  getPrevBlock,
+} from '../../src/op/helpers'
+import { Block } from '../../src/interfaces'
 
 /**
  *  a0
@@ -15,15 +20,78 @@ import { getNextBlock, getNthSiblingBlock, getPrevBlock } from '../../src/op/hel
  */
 
 const blocks: Block[] = [
-  { uid: 'a0', str: '0', order: 0, parentUid: null, childrenUids: ['b1', 'b2', 'b3'], open: true },
-  { uid: 'b1', str: '1', order: 0, parentUid: 'a0', childrenUids: ['c4', 'c5'], open: true },
-  { uid: 'b2', str: '2', order: 1, parentUid: 'a0', childrenUids: ['d6', 'd7'], open: false },
-  { uid: 'b3', str: '3', order: 2, parentUid: 'a0', childrenUids: [], open: false },
-  { uid: 'c4', str: '4', order: 0, parentUid: 'b1', childrenUids: [], open: true },
-  { uid: 'c5', str: '5', order: 1, parentUid: 'b1', childrenUids: ['e8'], open: true },
-  { uid: 'd6', str: '6', order: 0, parentUid: 'b2', childrenUids: [], open: true },
-  { uid: 'd7', str: '7', order: 1, parentUid: 'b2', childrenUids: [], open: true },
-  { uid: 'e8', str: '8', order: 0, parentUid: 'c5', childrenUids: [], open: true },
+  {
+    uid: 'a0',
+    str: '0',
+    order: 0,
+    parentUid: null,
+    childrenUids: ['b1', 'b2', 'b3'],
+    open: true,
+  },
+  {
+    uid: 'b1',
+    str: '1',
+    order: 0,
+    parentUid: 'a0',
+    childrenUids: ['c4', 'c5'],
+    open: true,
+  },
+  {
+    uid: 'b2',
+    str: '2',
+    order: 1,
+    parentUid: 'a0',
+    childrenUids: ['d6', 'd7'],
+    open: false,
+  },
+  {
+    uid: 'b3',
+    str: '3',
+    order: 2,
+    parentUid: 'a0',
+    childrenUids: [],
+    open: false,
+  },
+  {
+    uid: 'c4',
+    str: '4',
+    order: 0,
+    parentUid: 'b1',
+    childrenUids: [],
+    open: true,
+  },
+  {
+    uid: 'c5',
+    str: '5',
+    order: 1,
+    parentUid: 'b1',
+    childrenUids: ['e8'],
+    open: true,
+  },
+  {
+    uid: 'd6',
+    str: '6',
+    order: 0,
+    parentUid: 'b2',
+    childrenUids: [],
+    open: true,
+  },
+  {
+    uid: 'd7',
+    str: '7',
+    order: 1,
+    parentUid: 'b2',
+    childrenUids: [],
+    open: true,
+  },
+  {
+    uid: 'e8',
+    str: '8',
+    order: 0,
+    parentUid: 'c5',
+    childrenUids: [],
+    open: true,
+  },
 ]
 
 const [a0, b1, b2, b3, c4, c5, d6, d7, e8] = blocks

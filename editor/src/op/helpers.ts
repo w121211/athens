@@ -142,3 +142,14 @@ export function isChildRelation(relation: PositionRelation): boolean {
 export function isSiblingRelation(relation: PositionRelation): boolean {
   return ['before', 'after'].includes(relation)
 }
+
+/**
+ * Given a coll of uids, determine if uids are all direct children of the same parent.
+ */
+export function areSameParent(blocks: Block[]): boolean {
+  const parentUids = new Set()
+  for (const e of blocks) {
+    parentUids.add(e.parentUid)
+  }
+  return parentUids.size === 1
+}

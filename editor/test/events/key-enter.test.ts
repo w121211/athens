@@ -1,205 +1,567 @@
-import { addEntities } from '@ngneat/elf-entities'
+import { addEntities, setEntities } from '@ngneat/elf-entities'
 import { diff } from 'deep-object-diff'
-import { events } from '../../src/events'
-import { blockRepo, blocksStore, getBlock } from '../../src/stores/block.repository'
+import * as events from '../../src/events'
+import { Block } from '../../src/interfaces'
+import { validateChildrenUids } from '../../src/op/helpers'
+import {
+  blockRepo,
+  blocksStore,
+  getBlock,
+} from '../../src/stores/block.repository'
 import { rfdbRepo } from '../../src/stores/rfdb.repository'
-
-function clean(cur: Record<string, Block>) {
-  for (const [k, v] of Object.entries(cur)) {
-    delete cur[k].editTime
-  }
-  return cur
-}
+import { blocks, clean } from '../helpers'
 
 /**
- *  0
- *  - 1
- *    - 3
- *  - 2
+ *  a0
+ *  - b1
+ *    - c3
+ *       -d5
+ *    - c4
+ *    - c6
+ *  - b2
+ *
  */
-
-const blocks: Block[] = [
-  { uid: '0', str: '0', order: 0, parentUid: null, childrenUids: ['1', '2'] },
-  { uid: '1', str: '1', order: 0, parentUid: '0', childrenUids: ['3'] },
-  { uid: '2', str: '2', order: 1, parentUid: '0', childrenUids: [] },
-  { uid: '3', str: '3', order: 0, parentUid: '1', childrenUids: [] },
-]
-
-const [p, b1, b2, b3] = blocks
+const [a0, b1, b2, c3, c4, d5, c6] = blocks
 
 beforeEach(() => {
-  blockRepo.update([addEntities(blocks)])
+  blockRepo.update([setEntities(blocks)])
+  validateChildrenUids(blocksStore.getValue().entities)
+  rfdbRepo.setProps({ editing: { uid: 'b1' } })
 })
 
-it('enterAddChild()', () => {
-  rfdbRepo.setProps({ editing: { uid: '1' } })
+describe('enterAddChild()', () => {
+  it('validate', () => {
+    /**
+     *  a0*
+     *  - (x)
+     *  - b1
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - b2
+     *
+     */
+    const cur = blocksStore.getValue().entities
+    expect(() =>
+      events.enterAddChild(a0, 'x'),
+    ).toThrowErrorMatchingInlineSnapshot(`"[getPage] title not found "`)
+  })
 
-  /**
-   *  0
-   *  (- x)
-   *  - 1
-   *    - 3
-   *  - 2
-   */
-  let cur = blocksStore.getValue().entities,
-    next
-
-  events.enterAddChild(p, 'x')
-  next = clean(blocksStore.getValue().entities)
-  expect(diff(cur, next)).toMatchInlineSnapshot(`
-    Object {
-      "0": Object {
-        "childrenUids": Object {
-          "0": "x",
-          "1": "1",
-          "2": "2",
+  it('enterAddChild', () => {
+    /**
+     *  a0
+     *  - b1*
+     *    - (x)
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - b2
+     *
+     */
+    const cur = blocksStore.getValue().entities
+    events.enterAddChild(b1, 'x')
+    const next = clean(blocksStore.getValue().entities)
+    expect(() =>
+      validateChildrenUids(blocksStore.getValue().entities),
+    ).not.toThrow()
+    expect(rfdbRepo.getValue().editing?.uid).toMatchInlineSnapshot(`"x"`)
+    expect(diff(cur, next)).toMatchInlineSnapshot(`
+      Object {
+        "b1": Object {
+          "childrenUids": Object {
+            "0": "x",
+            "1": "c3",
+            "2": "c4",
+            "3": "c6",
+          },
         },
-      },
-      "1": Object {
-        "order": 1,
-      },
-      "2": Object {
-        "order": 2,
-      },
-      "x": Object {
-        "childrenUids": Array [],
-        "open": true,
-        "order": 0,
-        "parentUid": "0",
-        "str": "",
-        "uid": "x",
-      },
-    }
-  `)
-
-  /**
-   *  0
-   *  - x
-   *    (- y)
-   *  - 1
-   *    - 3
-   *  - 2
-   */
-  const x = getBlock('x')
-  events.enterAddChild(x, 'y')
-  cur = next
-  next = clean(blocksStore.getValue().entities)
-  expect(diff(cur, next)).toMatchInlineSnapshot(`
-    Object {
-      "x": Object {
-        "childrenUids": Object {
-          "0": "y",
+        "c3": Object {
+          "order": 1,
         },
-      },
-      "y": Object {
-        "childrenUids": Array [],
-        "open": true,
-        "order": 0,
-        "parentUid": "x",
-        "str": "",
-        "uid": "y",
-      },
-    }
-  `)
-
-  /**
-   *  0
-   *  - x
-   *    - y
-   *      (- z)
-   *  - 1
-   *    - 3
-   *  - 2
-   */
-  const y = getBlock('y')
-  events.enterAddChild(y, 'z')
-  cur = next
-  next = clean(blocksStore.getValue().entities)
-  expect(diff(cur, next)).toMatchInlineSnapshot(`
-    Object {
-      "y": Object {
-        "childrenUids": Object {
-          "0": "z",
+        "c4": Object {
+          "order": 2,
         },
-      },
-      "z": Object {
-        "childrenUids": Array [],
-        "open": true,
-        "order": 0,
-        "parentUid": "y",
-        "str": "",
-        "uid": "z",
-      },
-    }
-  `)
-
-  /**
-   *  0
-   *  - x
-   *    (- y2)
-   *    - y
-   *      (- z)
-   *  - 1
-   *    - 3
-   *  - 2
-   */
-  events.enterAddChild(x, 'y2')
-  cur = next
-  next = clean(blocksStore.getValue().entities)
-  expect(diff(cur, next)).toMatchInlineSnapshot(`
-    Object {
-      "x": Object {
-        "childrenUids": Object {
-          "0": "y2",
-          "1": "y",
+        "c6": Object {
+          "order": 3,
         },
-      },
-      "y": Object {
-        "order": 1,
-      },
-      "y2": Object {
-        "childrenUids": Array [],
-        "open": true,
-        "order": 0,
-        "parentUid": "x",
-        "str": "",
-        "uid": "y2",
-      },
-    }
-  `)
+        "x": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 0,
+          "parentUid": "b1",
+          "str": "",
+          "uid": "x",
+        },
+      }
+    `)
+  })
+
+  it('enterAddChild, enterAddChild, enterAddChild', () => {
+    /**
+     *  a0
+     *  - b1
+     *    - (x)
+     *      - (y)
+     *        - (z)
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - b2
+     *
+     */
+    const cur = blocksStore.getValue().entities
+
+    events.enterAddChild(b1, 'x')
+    events.enterAddChild(getBlock('x'), 'y')
+    events.enterAddChild(getBlock('y'), 'z')
+
+    const next = clean(blocksStore.getValue().entities)
+    expect(() =>
+      validateChildrenUids(blocksStore.getValue().entities),
+    ).not.toThrow()
+    expect(rfdbRepo.getValue().editing?.uid).toMatchInlineSnapshot(`"z"`)
+    expect(diff(cur, next)).toMatchInlineSnapshot(`
+      Object {
+        "b1": Object {
+          "childrenUids": Object {
+            "0": "x",
+            "1": "c3",
+            "2": "c4",
+            "3": "c6",
+          },
+        },
+        "c3": Object {
+          "order": 1,
+        },
+        "c4": Object {
+          "order": 2,
+        },
+        "c6": Object {
+          "order": 3,
+        },
+        "x": Object {
+          "childrenUids": Array [
+            "y",
+          ],
+          "open": true,
+          "order": 0,
+          "parentUid": "b1",
+          "str": "",
+          "uid": "x",
+        },
+        "y": Object {
+          "childrenUids": Array [
+            "z",
+          ],
+          "open": true,
+          "order": 0,
+          "parentUid": "x",
+          "str": "",
+          "uid": "y",
+        },
+        "z": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 0,
+          "parentUid": "y",
+          "str": "",
+          "uid": "z",
+        },
+      }
+    `)
+  })
 })
 
-it('enterNewBlock()', () => {
-  rfdbRepo.setProps({ editing: { uid: '0' } })
+describe('enterBumpUp()', () => {
+  it('validate', () => {
+    /**
+     *  (x)
+     *  a0*
+     *  - b1
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - b2
+     *
+     */
+    expect(() =>
+      events.enterBumpUp(a0, 'x'),
+    ).toThrowErrorMatchingInlineSnapshot(`"[getPage] title not found "`)
+  })
 
-  const parent = blocks[0],
-    block = blocks[1]
+  it('enterBumpUp', () => {
+    /**
+     *  a0
+     *  - (x)
+     *  - b1*
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - b2
+     *
+     */
+    const cur = blocksStore.getValue().entities
+    events.enterBumpUp(b1, 'x')
+    const next = clean(blocksStore.getValue().entities)
+    expect(() =>
+      validateChildrenUids(blocksStore.getValue().entities),
+    ).not.toThrow()
+    expect(rfdbRepo.getValue().editing?.uid).toMatchInlineSnapshot(`"x"`)
+    expect(diff(cur, next)).toMatchInlineSnapshot(`
+      Object {
+        "a0": Object {
+          "childrenUids": Object {
+            "0": "x",
+            "1": "b1",
+            "2": "b2",
+          },
+        },
+        "b1": Object {
+          "order": 1,
+        },
+        "b2": Object {
+          "order": 2,
+        },
+        "x": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 0,
+          "parentUid": "a0",
+          "str": "",
+          "uid": "x",
+        },
+      }
+    `)
+  })
 
-  // events.up('1', 'end')
-  events.enterNewBlock(block, parent, 'x')
-  expect(blocksStore.getValue().entities).toMatchSnapshot()
+  it('enterBumpUp, enterBumpUp, enterBumpUp', () => {
+    /**
+     *  a0
+     *  - (z)
+     *  - (y)
+     *  - (x)
+     *  - b1*
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - b2
+     *
+     */
+    const cur = blocksStore.getValue().entities
 
-  // expect(rfdbRepo.getValue().editing?.uid).toEqual('1')
+    events.enterBumpUp(b1, 'x')
+    events.enterBumpUp(getBlock('x'), 'y')
+    events.enterBumpUp(getBlock('y'), 'z')
+
+    const next = clean(blocksStore.getValue().entities)
+    expect(() =>
+      validateChildrenUids(blocksStore.getValue().entities),
+    ).not.toThrow()
+    expect(rfdbRepo.getValue().editing?.uid).toMatchInlineSnapshot(`"z"`)
+    expect(diff(cur, next)).toMatchInlineSnapshot(`
+      Object {
+        "a0": Object {
+          "childrenUids": Object {
+            "0": "z",
+            "1": "y",
+            "2": "x",
+            "3": "b1",
+            "4": "b2",
+          },
+        },
+        "b1": Object {
+          "order": 3,
+        },
+        "b2": Object {
+          "order": 4,
+        },
+        "x": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 2,
+          "parentUid": "a0",
+          "str": "",
+          "uid": "x",
+        },
+        "y": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 1,
+          "parentUid": "a0",
+          "str": "",
+          "uid": "y",
+        },
+        "z": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 0,
+          "parentUid": "a0",
+          "str": "",
+          "uid": "z",
+        },
+      }
+    `)
+  })
 })
 
-it('enterNewBlock, enterNewBlock, up', () => {
-  rfdbRepo.setProps({ editing: { uid: '0' } })
+describe('enterNewBlock()', () => {
+  it('validate', () => {
+    /**
+     *  a0*
+     *  - b1
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - b2
+     *
+     */
+    expect(() =>
+      events.enterNewBlock(a0, 'x'),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"[validatePosition] Location uid is a page, location must use title instead."`,
+    )
+  })
 
-  const parent = blocks[0]
+  it('enterNewBlock', () => {
+    /**
+     *  a0
+     *  - b1*
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - (x)
+     *  - b2
+     *
+     */
+    const cur = blocksStore.getValue().entities
+    events.enterNewBlock(b1, 'x')
+    const next = clean(blocksStore.getValue().entities)
+    expect(() =>
+      validateChildrenUids(blocksStore.getValue().entities),
+    ).not.toThrow()
+    expect(rfdbRepo.getValue().editing?.uid).toMatchInlineSnapshot(`"x"`)
+    expect(diff(cur, next)).toMatchInlineSnapshot(`
+      Object {
+        "a0": Object {
+          "childrenUids": Object {
+            "1": "x",
+            "2": "b2",
+          },
+        },
+        "b2": Object {
+          "order": 2,
+        },
+        "x": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 1,
+          "parentUid": "a0",
+          "str": "",
+          "uid": "x",
+        },
+      }
+    `)
+  })
 
-  // events.up('1', 'end')
-  events.enterNewBlock(blocks[1], parent, 'x')
-  expect(rfdbRepo.getValue().editing?.uid).toEqual('x')
+  it('enterNewBlock, enterNewBlock, enterNewBlock', () => {
+    /**
+     *  a0
+     *  - b1*
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - (x)
+     *  - (y)
+     *  - (z)
+     *  - b2
+     *
+     */
+    const cur = blocksStore.getValue().entities
 
-  events.up('x', 0)
-  expect(rfdbRepo.getValue().editing?.uid).toEqual('1')
+    events.enterNewBlock(b1, 'x')
+    events.enterNewBlock(getBlock('x'), 'y')
+    events.enterNewBlock(getBlock('y'), 'z')
 
-  events.enterNewBlock(getBlock('x'), parent, 'y')
-  expect(blocksStore.getValue().entities).toMatchSnapshot()
-  expect(rfdbRepo.getValue().editing?.uid).toEqual('y')
+    const next = clean(blocksStore.getValue().entities)
+    expect(() =>
+      validateChildrenUids(blocksStore.getValue().entities),
+    ).not.toThrow()
+    expect(rfdbRepo.getValue().editing?.uid).toMatchInlineSnapshot(`"z"`)
+    expect(diff(cur, next)).toMatchInlineSnapshot(`
+      Object {
+        "a0": Object {
+          "childrenUids": Object {
+            "1": "x",
+            "2": "y",
+            "3": "z",
+            "4": "b2",
+          },
+        },
+        "b2": Object {
+          "order": 4,
+        },
+        "x": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 1,
+          "parentUid": "a0",
+          "str": "",
+          "uid": "x",
+        },
+        "y": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 2,
+          "parentUid": "a0",
+          "str": "",
+          "uid": "y",
+        },
+        "z": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 3,
+          "parentUid": "a0",
+          "str": "",
+          "uid": "z",
+        },
+      }
+    `)
+  })
+})
 
-  events.up('y', 0)
-  expect(rfdbRepo.getValue().editing?.uid).toEqual('x')
+describe('enterSplitBlock()', () => {
+  it('validate', () => {
+    /**
+     *  a0*
+     *  - b1
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - b2
+     *
+     */
+    expect(() =>
+      events.enterSplitBlock(a0, 'x', 'value', 0, 'before'),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"[validatePosition] Location uid is a page, location must use title instead."`,
+    )
+  })
 
-  // expect(rfdbRepo.getValue().editing?.uid).toEqual('1')
+  it('enterSplitBlock', () => {
+    /**
+     *  a0
+     *  - b1*
+     *    - c3
+     *       -d5
+     *    - c4
+     *    - c6
+     *  - (x)
+     *  - b2
+     *
+     */
+    const cur = blocksStore.getValue().entities
+    events.enterSplitBlock(c3, 'x', '12345', 0, 'before')
+    const next = clean(blocksStore.getValue().entities)
+    expect(() =>
+      validateChildrenUids(blocksStore.getValue().entities),
+    ).not.toThrow()
+    expect(rfdbRepo.getValue().editing?.uid).toMatchInlineSnapshot(`"x"`)
+    expect(diff(cur, next)).toMatchInlineSnapshot(`
+      Object {
+        "a0": Object {
+          "childrenUids": Object {
+            "1": "x",
+            "2": "b2",
+          },
+        },
+        "b2": Object {
+          "order": 2,
+        },
+        "x": Object {
+          "childrenUids": Array [],
+          "open": true,
+          "order": 1,
+          "parentUid": "a0",
+          "str": "",
+          "uid": "x",
+        },
+      }
+    `)
+  })
+
+  // it('enterSplitBlock, enterSplitBlock, enterSplitBlock', () => {
+  //   /**
+  //    *  a0
+  //    *  - b1*
+  //    *    - c3
+  //    *       -d5
+  //    *    - c4
+  //    *    - c6
+  //    *  - (x)
+  //    *  - (y)
+  //    *  - (z)
+  //    *  - b2
+  //    *
+  //    */
+  //   const cur = blocksStore.getValue().entities
+
+  //   events.enterSplitBlock(b1, 'x')
+  //   events.enterSplitBlock(getBlock('x'), 'y')
+  //   events.enterSplitBlock(getBlock('y'), 'z')
+
+  //   const next = clean(blocksStore.getValue().entities)
+  //   expect(() =>
+  //     validateChildrenUids(blocksStore.getValue().entities),
+  //   ).not.toThrow()
+  //   expect(rfdbRepo.getValue().editing?.uid).toMatchInlineSnapshot(`"z"`)
+  //   expect(diff(cur, next)).toMatchInlineSnapshot(`
+  //     Object {
+  //       "a0": Object {
+  //         "childrenUids": Object {
+  //           "1": "x",
+  //           "2": "y",
+  //           "3": "z",
+  //           "4": "b2",
+  //         },
+  //       },
+  //       "b2": Object {
+  //         "order": 4,
+  //       },
+  //       "x": Object {
+  //         "childrenUids": Array [],
+  //         "open": true,
+  //         "order": 1,
+  //         "parentUid": "a0",
+  //         "str": "",
+  //         "uid": "x",
+  //       },
+  //       "y": Object {
+  //         "childrenUids": Array [],
+  //         "open": true,
+  //         "order": 2,
+  //         "parentUid": "a0",
+  //         "str": "",
+  //         "uid": "y",
+  //       },
+  //       "z": Object {
+  //         "childrenUids": Array [],
+  //         "open": true,
+  //         "order": 3,
+  //         "parentUid": "a0",
+  //         "str": "",
+  //         "uid": "z",
+  //       },
+  //     }
+  //   `)
+  // })
 })

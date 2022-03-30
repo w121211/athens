@@ -1,41 +1,37 @@
 import { editingFocus, navigate, setCursorPosition } from './effects'
-import { Block, DestructTextareaKeyEvent, Position, PositionRelation } from './interfaces'
+import {
+  Block,
+  DestructTextareaKeyEvent,
+  Position,
+  PositionRelation,
+} from './interfaces'
 import * as ops from './op/ops'
-import { compatPosition } from './op/helpers'
-import { blockRepo, blocksStore, getBlock, getBlockChildren } from './stores/block.repository'
+import { areSameParent, compatPosition } from './op/helpers'
+import {
+  BlockReducer,
+  blockRepo,
+  blocksStore,
+  getBlock,
+  getBlockChildren,
+} from './stores/block.repository'
 import { rfdbRepo } from './stores/rfdb.repository'
 import { genBlockUid } from './utils'
 import { isInteger, isNumber } from 'lodash'
-
-function blockSaveBlockMoveCompositeOp(sourceUid: string, refUid: string, relation: PositionRelation, str: string) {
-  const location = compatPosition({ blockUid: refUid, relation })
-
-  // TODO: composite ops
-  ops.blockSaveOp(sourceUid, str)
-  ops.blockMoveOp(sourceUid, location)
-}
-
-function getPrevSiblingBlockAndTargetRel(block: Block): [Block | null, PositionRelation] {
-  const parent = block.parentUid ? getBlock(block.parentUid) : null,
-    prevSib = parent && getNthSiblingBlock(block, parent, -1),
-    targetRel = prevSib && prevSib.childrenUids.length > 0 ? 'last' : 'first'
-  return [prevSib, targetRel]
-}
+import { nextBlock, nthSiblingBlock, prevBlock } from './op/queries'
 
 export function up(uid: string, targetPos: number | 'end') {
   const block = getBlock(uid),
     parent = block.parentUid && getBlock(block.parentUid),
-    prev = parent && getPrevBlock(block, parent),
-    editingUid = prev ? prev.uid : uid
-  console.debug(block, parent, prev, blocksStore.getValue())
-  editingUid(editingUid, targetPos)
+    prev = parent && prevBlock(block, parent),
+    _editingUid = prev ? prev.uid : uid
+  editingUid(_editingUid, targetPos)
 }
 
 export function down(uid: string, targetPos: number | 'end') {
   const block = getBlock(uid),
-    next = block && getNextBlock(block),
-    editingUid = next ? next.uid : uid
-  editingUid(editingUid, targetPos)
+    next = block && nextBlock(block),
+    _editingUid = next ? next.uid : uid
+  editingUid(_editingUid, targetPos)
 }
 
 /**
@@ -47,15 +43,19 @@ Otherwise delete block and join with previous block
 If prev-block has children"
  * 
  */
-export function backspace(uid: string, value: string, maybeLocalUpdates?: string) {
+export function backspace(
+  uid: string,
+  value: string,
+  maybeLocalUpdates?: string,
+) {
   // const rootEmbed = false,
   // [uid, embedId] = uidAndEmbedId(_uid),
   const block = getBlock(uid),
     { order, parentUid } = block,
     children = getBlockChildren(uid),
     parent = parentUid ? getBlock(parentUid) : null,
-    prev = parent && getPrevBlock(block, parent),
-    prevSib = parent && getNthSiblingBlock(block, parent, -1)
+    prev = parent && prevBlock(block, parent),
+    prevSib = parent && nthSiblingBlock(block, parent, -1)
 
   if (
     parent === null ||
@@ -64,18 +64,32 @@ export function backspace(uid: string, value: string, maybeLocalUpdates?: string
   ) {
     return
   }
-  if (children.length === 0 && parent.nodeTitle && order === 0 && value === '') {
-    backspaceDeleteOnlyChild(uid)
+  if (
+    children.length === 0 &&
+    parent.pageTitle &&
+    order === 0 &&
+    value === ''
+  ) {
+    backspaceDeleteOnlyChild(block)
     return
   }
   if (prev && maybeLocalUpdates) {
-    backspaceDeleteMergeBlockWithSave(uid, value, prev, maybeLocalUpdates)
+    backspaceDeleteMergeBlockWithSave(block, value, prev, maybeLocalUpdates)
     return
   }
   if (prev) {
-    backspaceDeleteMergeBlock(uid, value, prev)
+    backspaceDeleteMergeBlock(block, value, prev)
+    return
   }
-  console.error({ block, value, maybeLocalUpdates, children, parent, prev, prevSib })
+  console.error({
+    block,
+    value,
+    maybeLocalUpdates,
+    children,
+    parent,
+    prev,
+    prevSib,
+  })
   throw new Error('backspace::unhandled situation')
 }
 
@@ -93,7 +107,7 @@ export function enter(uid: string, dKeyDown: DestructTextareaKeyEvent) {
   const block = getBlock(uid),
     hasChildren = block.childrenUids.length > 0,
     parent = block.parentUid && getBlock(block.parentUid),
-    rootBlock = (parent && parent.pageTitle) !== undefined,
+    parentIsRootBlock = (parent && parent.pageTitle) !== undefined,
     // contextRootUid = rfdbRepo.currentRoute.pathParams.id,  // contextRoot: the block opened as root
     contextRootUid = undefined,
     newUid = genBlockUid(),
@@ -104,9 +118,9 @@ export function enter(uid: string, dKeyDown: DestructTextareaKeyEvent) {
   if (block.open && hasChildren && caretAtEnd) {
     enterAddChild(block, newUid)
   } else if (!block.open && hasChildren && caretAtEnd && parent) {
-    enterNewBlock(block, parent, newUid)
-  } else if ((valueEmpty || rootBlock) && parent) {
-    enterNewBlock(block, parent, newUid)
+    enterNewBlock(block, newUid)
+  } else if (valueEmpty && parentIsRootBlock) {
+    enterNewBlock(block, newUid)
   } else if (block.open && !caretAtEnd) {
     enterSplitBlock(block, newUid, value, start, 'first')
   } else if (start !== 0) {
@@ -116,9 +130,31 @@ export function enter(uid: string, dKeyDown: DestructTextareaKeyEvent) {
   } else if (start === 0 && value) {
     enterBumpUp(block, newUid)
   } else {
-    console.debug('[enter] ->', { uid, dKeyDown, block, parent })
+    console.debug('[enter]', { uid, dKeyDown, block, parent })
     throw new Error('[enter]')
   }
+}
+
+function blockSaveBlockMoveCompositeOp(
+  sourceBlock: Block,
+  refUid: string,
+  relation: PositionRelation,
+  str: string,
+): [BlockReducer[], BlockReducer[]] {
+  const location = compatPosition({ blockUid: refUid, relation })
+  return [
+    ops.blockSaveOp(sourceBlock.uid, str),
+    ops.blockMoveOp(sourceBlock, location),
+  ]
+}
+
+function getPrevSiblingBlockAndTargetRel(
+  block: Block,
+): [Block | null, PositionRelation] {
+  const parent = block.parentUid ? getBlock(block.parentUid) : null,
+    prevSib = parent && nthSiblingBlock(block, parent, -1),
+    targetRel = prevSib && prevSib.childrenUids.length > 0 ? 'last' : 'first'
+  return [prevSib, targetRel]
 }
 
 /**
@@ -128,67 +164,131 @@ export function enter(uid: string, dKeyDown: DestructTextareaKeyEvent) {
   ;;                 transaction that updates the string).
   // if sibling block is closed with children, open
  */
-export function indent(uid: string, dKeyDown: DestructTextareaKeyEvent, localStr: string) {
+export function indent(
+  uid: string,
+  dKeyDown: DestructTextareaKeyEvent,
+  localStr: string,
+) {
   const block = getBlock(uid),
     blockZero = block.order === 0,
-    [sibBlock, targetRel] = getPrevSiblingBlockAndTargetRel(block)
+    [sib, rel] = getPrevSiblingBlockAndTargetRel(block)
 
-  if (sibBlock && !blockZero) {
-    const sibClosed = !sibBlock.open && sibBlock.childrenUids.length > 0,
-      sibBlockOpenOp = sibClosed && blockRepo.blockOpenOp(sibBlock.uid, true),
+  if (sib && !blockZero) {
+    const sibClose = !sib.open && sib.childrenUids.length > 0,
+      sibOpenOp = sibClose && ops.blockOpenOp(sib.uid, true),
       { start, end } = dKeyDown,
-      blockSaveBlockMoveOp = blockSaveBlockMoveCompositeOp(uid, sibBlock.uid, targetRel, localStr)
+      [saveOp, moveOp] = blockSaveBlockMoveCompositeOp(
+        block,
+        sib.uid,
+        rel,
+        localStr,
+      )
 
-    if (sibBlockOpenOp) {
-      blockRepo.update([blockSaveBlockMoveOp, sibBlockOpenOp])
+    if (sibOpenOp) {
+      blockRepo.update([...saveOp, ...moveOp, ...sibOpenOp])
     } else {
-      blockRepo.update([blockSaveBlockMoveOp])
+      blockRepo.update([...saveOp, ...moveOp])
     }
+    setCursorPosition(uid, start, end)
   }
 }
 
-export function unindent(uid: string, dKeyDown: DestructTextareaKeyEvent, localStr: string, contextRootUid?: string) {
+export function indentMulti(uids: string[]) {
+  const blocks = uids.map((e) => getBlock(e)),
+    firstBlock = blocks[0],
+    firstBlockOrder = firstBlock.order,
+    blockZero_ = firstBlockOrder === 0,
+    [prevBlock, targetRel] = getPrevSiblingBlockAndTargetRel(firstBlock),
+    sameParent_ = areSameParent(blocks)
+
+  if (sameParent_ && !blockZero_ && prevBlock) {
+    dropMultiSiblings(uids, prevBlock.uid, targetRel)
+  }
+}
+
+export function unindent(
+  uid: string,
+  dKeyDown: DestructTextareaKeyEvent,
+  localStr: string,
+  contextRootUid?: string,
+) {
   const block = getBlock(uid),
     parent = block.parentUid ? getBlock(block.parentUid) : null,
-    doNothing = parent === null || parent.pageTitle !== null || contextRootUid === parent.uid,
+    // doNothing =
+    //   parent === null ||
+    //   parent.pageTitle !== null ||
+    //   contextRootUid === parent.uid,
     { start, end } = dKeyDown
 
-  // async flow
-  blockSaveBlockMoveCompositeOp(uid, parent.uid, 'after', localStr)
-  editingUid(uid)
-  setCursorPosition(uid, start, end)
+  if (parent && parent.pageTitle === undefined) {
+    const [saveOp, moveOp] = blockSaveBlockMoveCompositeOp(
+      block,
+      parent.uid,
+      'after',
+      localStr,
+    )
+    blockRepo.update([...saveOp, ...moveOp])
+
+    editingUid(uid)
+    setCursorPosition(uid, start, end)
+  }
+}
+
+export function unindentMulti(uids: string[]) {
+  const blocks = uids.map((e) => getBlock(e)),
+    firstBlock = blocks[0],
+    parent = firstBlock.parentUid ? getBlock(firstBlock.parentUid) : null,
+    sameParent_ = areSameParent(blocks)
+
+  if (parent && parent.pageTitle === undefined && sameParent_) {
+    dropMultiSiblings(uids, parent.uid, 'after')
+  }
 }
 
 // Backspace Events
 
-export function backspaceDeleteMergeBlock(uid: string, value: string, prevBlock: Block) {
-  // async flow
-  blockRepo.blockRemoveMergeOp(uid, prevBlock.uid, value)
-  // focusOnUid(prevBlock.uid, prevBlock.str.length)
-  events.editingUid(uid, prevBlock.str.length)
+export function backspaceDeleteMergeBlock(
+  block: Block,
+  value: string,
+  prevBlock: Block,
+) {
+  blockRepo.updateInChain(ops.blockMergeChainOp(block, prevBlock, value))
+  editingUid(prevBlock.uid, prevBlock.str.length)
 }
 
-export function backspaceDeleteMergeBlockWithSave(uid: string, value: string, prevBlock: Block, localUpdate?: string) {
-  // async flow
-  blockRepo.blockMergeWithUpdateOp(uid, prevBlock.uid, value, localUpdate)
-  // focusOnUid(prevBlock.uid, localUpdate?.length)
-  events.editingUid(uid, localUpdate?.length)
+export function backspaceDeleteMergeBlockWithSave(
+  block: Block,
+  // uid: string,
+  value: string,
+  prevBlock: Block,
+  localUpdate?: string,
+) {
+  blockRepo.updateInChain(
+    ops.blockMergeWithUpdatedChainOp(block, prevBlock, value, localUpdate),
+  )
+  editingUid(prevBlock.uid, localUpdate?.length)
 }
 
-export function backspaceDeleteOnlyChild(uid: string) {
-  blockRepo.blockRemoveOp(uid)
+export function backspaceDeleteOnlyChild(block: Block) {
+  blockRepo.update(ops.blockRemoveOp(block))
   editingUid(null)
 }
 
 // Block events
 
-export function blockMove(sourceUid: string, targetUid: string, targetRel: PositionRelation) {
+export function blockMove(
+  sourceUid: string,
+  targetUid: string,
+  targetRel: PositionRelation,
+) {
   const block = getBlock(sourceUid)
-  blockRepo.update(ops.blockMoveOp(block, { blockUid: targetUid, relation: targetRel }))
+  blockRepo.update(
+    ops.blockMoveOp(block, { blockUid: targetUid, relation: targetRel }),
+  )
 }
 
 export function blockOpen(uid: string, open: boolean) {
-  ops.blockOpenOp(uid, open)
+  blockRepo.update(ops.blockOpenOp(uid, open))
 }
 
 export function blockSave(uid: string, str: string) {
@@ -199,22 +299,28 @@ export function blockSave(uid: string, str: string) {
     throw new Error('blockSave::node-block not allow to change string')
   }
   if (!doNothing) {
-    ops.blockSaveOp(uid, str)
+    blockRepo.update(ops.blockSaveOp(uid, str))
   }
 }
 
-// Drop Events
+// ------ Drop Events (Drag & Drop) ------
 
 export function dropMultiChild(sourceUids: string[], targetUid: string) {
-  ops.blockMoveChain(targetUid, sourceUids, 'first')
+  blockRepo.updateInChain(ops.blockMoveChainOp(targetUid, sourceUids, 'first'))
 }
 
 /**
  * ;; When the selected blocks have same parent and are DnD under the same parent this event is fired.
     ;; This also applies if on selects multiple Zero level blocks and change the order among other Zero level blocks.
  */
-export function dropMultiSiblings(sourceUids: string[], targetUid: string, dragTarget: PositionRelation) {
-  ops.blockMoveChain(targetUid, sourceUids, dragTarget)
+export function dropMultiSiblings(
+  sourceUids: string[],
+  targetUid: string,
+  dragTarget: PositionRelation,
+) {
+  blockRepo.updateInChain(
+    ops.blockMoveChainOp(targetUid, sourceUids, dragTarget),
+  )
 }
 
 // Editing Events
@@ -229,7 +335,7 @@ export function editingUid(uid: string | null, cursorAnchor?: number | 'end') {
   editingFocus(uid, cursorAnchor)
 }
 
-// Enter Events
+// ------ Enter Events ------
 
 export function enterAddChild(block: Block, newUid: string) {
   const position = compatPosition({ blockUid: block.uid, relation: 'first' }),
@@ -245,9 +351,11 @@ export function enterBumpUp(block: Block, newUid: string) {
   editingUid(newUid)
 }
 
-export function enterNewBlock(block: Block, parent: Block, newUid: string) {
-  const op = ops.blockNewOp(newUid, { blockUid: block.uid, relation: 'after' })
-  blockRepo.update(op)
+// export function enterNewBlock(block: Block, parent: Block, newUid: string) {
+export function enterNewBlock(block: Block, newUid: string) {
+  blockRepo.update(
+    ops.blockNewOp(newUid, { blockUid: block.uid, relation: 'after' }),
+  )
   editingUid(newUid)
 }
 
@@ -258,8 +366,9 @@ export function enterSplitBlock(
   index: number,
   relation: PositionRelation,
 ) {
-  const op = ops.blockSplitOp(block, newUid, value, index, relation)
-  blockRepo.update(op)
+  blockRepo.updateInChain(
+    ops.blockSplitChainOp(block, newUid, value, index, relation),
+  )
   editingUid(newUid)
 }
 
@@ -309,7 +418,10 @@ export function selectionSetItems(uids: string[]) {
   rfdbRepo.updateSelectionItems(uids)
 }
 
-export function selectionAddItem(uid: string, position: number | 'first' | 'last') {
+export function selectionAddItem(
+  uid: string,
+  position: number | 'first' | 'last',
+) {
   const selectedItems = rfdbRepo.getValue().selection.items,
     selectedCount = selectedItems.length
 
@@ -326,7 +438,12 @@ export function selectionAddItem(uid: string, position: number | 'first' | 'last
       ]
       rfdbRepo.updateSelectionItems([...newSelectedItems, uid])
     } else {
-      console.error('[selectionAddItem] Invalid insert position', position, uid, selectedItems)
+      console.error(
+        '[selectionAddItem] Invalid insert position',
+        position,
+        uid,
+        selectedItems,
+      )
     }
   }
 }

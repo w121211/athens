@@ -12,13 +12,6 @@ import { clean } from '../helpers'
  *  - 2
  */
 
-const blocks: Block[] = [
-  { uid: '0', str: '0', order: 0, parentUid: null, childrenUids: ['1', '2'], pageTitle: 'page-0' },
-  { uid: '1', str: '1', order: 0, parentUid: '0', childrenUids: ['3'] },
-  { uid: '2', str: '2', order: 1, parentUid: '0', childrenUids: [] },
-  { uid: '3', str: '3', order: 0, parentUid: '1', childrenUids: [] },
-]
-
 beforeEach(() => {
   blockRepo.update([addEntities(blocks)])
 })
