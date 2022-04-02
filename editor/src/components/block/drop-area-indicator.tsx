@@ -1,12 +1,12 @@
 import styled from 'styled-components'
 
 export const DropAreaIndicatorWrap = styled.div`
-  display block;
+  display: block;
   height: 1px;
   pointer-events: none;
   margin-bottom: -1px;
-  opacity: (:opacity-high style/OPACITIES);
-  color: (style/color :link-color);
+  opacity: 0.75;
+  color: #0075E1;
   position: relative;
   transform-origin: left;
   z-index: 3;
@@ -18,9 +18,9 @@ export const DropAreaIndicatorWrap = styled.div`
     top: -0.5px;
     right: 0;
     bottom: -0.5px;
-    left: "calc(2em - 4px)";
+    left: calc(2em - 4px);
     border-radius: 100px;
-    background: currentColor;
+    background: currentcolor;
   }
 
   &.child {
@@ -35,11 +35,11 @@ export const DropAreaIndicatorWrap = styled.div`
   }
   
   &.child:before {
-    position: "absolute";
+    position: absolute;
     content: '';
     border-radius: 10em;
     border: 2px solid ;
-    --size 4px;
+    --size: 4px;
     width: var(--size);
     height var(--size);
     left: var(--indent);

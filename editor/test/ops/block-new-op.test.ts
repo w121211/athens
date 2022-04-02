@@ -3,7 +3,7 @@ import { diff } from 'deep-object-diff'
 import { Block, Page } from '../../src/interfaces'
 import { blockNewOp } from '../../src/op/ops'
 import { blockRepo, blocksStore } from '../../src/stores/block.repository'
-import { pagesStore } from '../../src/stores/page.repository'
+import { pagesStore } from '../../src/stores/doc.repository'
 import { clean } from '../helpers'
 
 /**

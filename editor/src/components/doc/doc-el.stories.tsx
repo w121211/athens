@@ -1,40 +1,25 @@
 import React from 'react'
 import { ComponentStory, ComponentMeta } from '@storybook/react'
+import { setEntities } from '@ngneat/elf-entities'
+import { mockLocalData } from '../../services/mock-data'
+import { blockRepo } from '../../stores/block.repository'
+import { docRepo } from '../../stores/doc.repository'
 import { DocEl } from './doc-el'
 
-// More on default export: https://storybook.js.org/docs/react/writing-stories/introduction#default-export
+/**
+ * Setup data (before all)
+ */
+blockRepo.update([setEntities(mockLocalData.blocks)])
+docRepo.update([setEntities([mockLocalData.doc])])
+
 export default {
-  title: 'Example/DocEl',
+  title: 'Doc/DocEl',
   component: DocEl,
-  // More on argTypes: https://storybook.js.org/docs/react/api/argtypes
-  argTypes: {
-    backgroundColor: { control: 'color' },
-  },
 } as ComponentMeta<typeof DocEl>
 
-// More on component templates: https://storybook.js.org/docs/react/writing-stories/introduction#using-args
 const Template: ComponentStory<typeof DocEl> = (args) => <DocEl {...args} />
 
-export const Primary = Template.bind({})
-// More on args: https://storybook.js.org/docs/react/writing-stories/args
-Primary.args = {
-  primary: true,
-  label: 'Button',
-}
-
-export const Secondary = Template.bind({})
-Secondary.args = {
-  label: 'Button',
-}
-
-export const Large = Template.bind({})
-Large.args = {
-  size: 'large',
-  label: 'Button',
-}
-
-export const Small = Template.bind({})
-Small.args = {
-  size: 'small',
-  label: 'Button',
+export const Basic = Template.bind({})
+Basic.args = {
+  doc: mockLocalData.doc,
 }

@@ -50,7 +50,7 @@ export function moveBetween(
   relation: PositionRelation,
   ref: Block,
 ) {
-  console.debug(src, dest, x, relation, ref)
+  // console.debug(src, dest, x, relation, ref)
 
   assert(x.uid !== ref.uid, '[moveBetween] x and ref are the same block')
   assert(
@@ -79,7 +79,7 @@ export function moveWithin(
   relation: PositionRelation,
   ref: Block,
 ): Block[] {
-  console.debug(v, x, relation, ref)
+  // console.debug(v, x, relation, ref)
 
   assert(x.uid !== ref.uid, '[moveWithin] x and ref are the same block')
   assert(

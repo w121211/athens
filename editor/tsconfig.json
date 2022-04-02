@@ -14,22 +14,16 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "downlevelIteration": true,
-    "incremental": true,
-    "paths": {
-      "@/*": ["./@components/*"]
-    }
+    "incremental": true
+
+    // "importHelpers": true,
+    // "rootDir": "src/js/components/",
+    // "baseUrl": "src/js/components",
+    // "paths": {
+    //   "@/*": ["./*"]
+    // }
   },
-  "exclude": ["node_modules", ".next", "out", "dist", "@components"],
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.js",
-    "test",
-    "src",
-    "playground",
-    "stories"
-  ],
+  "include": ["src/**/*.tsx", "test/**/*.ts"],
   "ts-node": {
     "transpileOnly": true,
     // these options are overrides used only by ts-node

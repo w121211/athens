@@ -1,4 +1,3 @@
-import { DragEvent } from 'react'
 import { rfdbRepo } from '../stores/rfdb.repository'
 import { getDatasetUid, mouseOffset, verticalCenter } from '../utils'
 import type { Block, DragTarget } from '../interfaces'
@@ -52,24 +51,21 @@ function dropBulletMulti(
  *
  */
 export function blockDragLeave(
-  event: DragEvent,
+  e: React.DragEvent,
   block: Block,
   setDragTarget: React.Dispatch<
     React.SetStateAction<'first' | 'before' | 'after' | null>
   >,
 ) {
-  event.preventDefault()
-  event.stopPropagation()
+  e.preventDefault()
+  e.stopPropagation()
   const { uid: targetUid } = block,
     relatedUid =
-      event.relatedTarget instanceof HTMLElement
-        ? getDatasetUid(event.relatedTarget)
+      e.relatedTarget instanceof HTMLElement
+        ? getDatasetUid(e.relatedTarget)
         : null
 
-  if (relatedUid !== targetUid) {
-    // swap(state, { dragTarget: null })
-    setDragTarget(null)
-  }
+  if (relatedUid !== targetUid) setDragTarget(null)
 }
 
 /**
@@ -79,20 +75,18 @@ export function blockDragLeave(
   If below midpoint, show drop indicator below."
  */
 export function blockDragOver(
-  event: DragEvent,
+  e: React.DragEvent,
   block: Block,
   setDragTarget: React.Dispatch<React.SetStateAction<DragTarget | null>>,
 ) {
-  event.preventDefault()
-  event.stopPropagation()
+  e.preventDefault()
+  e.stopPropagation()
 
   const { childrenUids, uid, open } = block,
-    closestContainer = (event.target as HTMLElement).closest(
-      '.block-container',
-    ),
-    offset = closestContainer && mouseOffset(event, closestContainer),
+    closestContainer = (e.target as HTMLElement).closest('.block-container'),
+    offset = closestContainer && mouseOffset(e, closestContainer),
     middleY = closestContainer && verticalCenter(closestContainer),
-    draggingAncestor = (event.target as HTMLElement).closest('.dragging'),
+    draggingAncestor = (e.target as HTMLElement).closest('.dragging'),
     isSelected = rfdbRepo.getIsSelected(uid)
 
   let target: DragTarget | null = null
@@ -111,10 +105,7 @@ export function blockDragOver(
     target = 'after'
   }
 
-  if (target) {
-    // setState({ ...state, dragTarget: target })
-    setDragTarget(target)
-  }
+  if (target) setDragTarget(target)
 }
 
 /**
@@ -122,7 +113,7 @@ export function blockDragOver(
   : https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API#Define_a_drop_zone"
  */
 export function blockDrop(
-  event: DragEvent,
+  event: React.DragEvent,
   block: Block,
   dragTarget: DragTarget | null,
   setDragTarget: React.Dispatch<React.SetStateAction<DragTarget | null>>,
@@ -158,4 +149,27 @@ export function blockDrop(
   //   dragTarget: null,
   // })
   setDragTarget(null)
+}
+
+/**
+ * "Begin drag event: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API#Define_the_drags_data"
+ */
+export function bulletDragStart(
+  e: React.DragEvent,
+  uid: string,
+  setDragging: React.Dispatch<React.SetStateAction<boolean>>,
+): void {
+  const effectAllowed = e.shiftKey ? 'link' : 'move'
+  e.dataTransfer.effectAllowed = effectAllowed
+  e.dataTransfer.setData('text/plain', uid)
+  setDragging(true)
+}
+
+/**
+ * End drag event
+ */
+export function bulletDragEnd(
+  setDragging: React.Dispatch<React.SetStateAction<boolean>>,
+): void {
+  setDragging(false)
 }

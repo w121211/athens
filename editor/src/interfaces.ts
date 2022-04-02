@@ -1,9 +1,11 @@
-/**
- * Component properties
- *
- */
-
-// block-el-state
+//
+// Component state
+//
+//
+//
+//
+//
+//
 
 export type SearchType = 'page' | 'slash' | 'hashtag' | 'template'
 
@@ -64,44 +66,14 @@ export type CaretPosition = {
 //   React.SetStateAction<BlockElState>
 // >
 
-export type NodeProps = {
-  db: {
-    id?: string
-  }
-  block: {
-    uid?: string
-    children?: { uid: string }[]
-  }
-  node: {
-    title?: string
-  }
-  page: {
-    sidebar?: false
-  }
-}
-
-export type NodeElProps = {
-  menu: {
-    show: boolean
-  }
-  title: {
-    initial?: string
-    local?: string
-  }
-  alert: {
-    show?: null
-    message?: null
-    confirmFn?: null
-    cancelFn?: null
-  }
-  // LinkedReferences: true
-  // UnlinkedReferences: false
-  node?: NodeProps
-}
-
-/**
- * Dom events
- */
+//
+// Events & Dom events
+//
+//
+//
+//
+//
+//
 
 export type DestructTextareaKeyEvent = {
   value: string
@@ -119,69 +91,159 @@ export type DestructTextareaKeyEvent = {
   alt: boolean
 }
 
-// /**
-//  * A person interacting with Athens in a multiplayer context
-//  */
-// type Person = {
-//   personId: string
-//   username: string
-//   color: string // CSS color
-// }
-
-// /**
-//  * OS the name of supported OSs
-//  */
-// type OS = 'mac' | 'windows' | 'linux'
-
-// /**
-//  * The state of a session's connection to the Athens host
-//  */
-// type ConnectionStatus = 'local' | 'connecting' | 'connected' | 'reconnecting' | 'offline'
-
-// type HostAddress = string
-
-// /**
-//  * A knowledge graph
-//  */
-// type Database = {
-//   id: string
-//   name: string
-//   isRemote: boolean
-//   icon?: string // Emoji
-//   color?: string // CSS color
-// }
+/**
+ * A block's relative position, defined by a reference block / a doc
+ *
+ * @param refBlockUid ref-block uid
+ * @param docTitle if ref-block is a doc, use doc-title instead of block-uid
+ * @param relation position relate to ref-block
+ */
+export type BlockPosition = {
+  refBlockUid?: string
+  docTitle?: string
+  relation: BlockPositionRelation
+}
 
 /**
- * Stores
+ * parent-child relation: 'first' | 'last'
+ * siblings relation: 'before' | 'after'
  */
+export type BlockPositionRelation = 'first' | 'last' | 'before' | 'after'
 
-export type Page = {
-  title: string // as id
-  blockUid: string // corresponding block
-}
+//
+// Stores
+//
+//
+//
+//
+//
+//
+
+// export type NodeProps = {
+//   db: {
+//     id?: string
+//   }
+//   block: {
+//     uid?: string
+//     children?: { uid: string }[]
+//   }
+//   node: {
+//     title?: string
+//   }
+//   page: {
+//     sidebar?: false
+//   }
+// }
+
+// export type NodeElProps = {
+//   menu: {
+//     show: boolean
+//   }
+//   title: {
+//     initial?: string
+//     local?: string
+//   }
+//   alert: {
+//     show?: null
+//     message?: null
+//     confirmFn?: null
+//     cancelFn?: null
+//   }
+//   // LinkedReferences: true
+//   // UnlinkedReferences: false
+//   node?: NodeProps
+// }
 
 export type Block = {
   uid: string
   str: string
   open?: boolean
   order: number
-  pageTitle?: string // only for node-block (ie, root)
-  parentUid: string | null
+  docTitle?: string // only for doc-block
+  parentUid: string | null // null for doc-block
   childrenUids: string[]
-  editTime?: number
-  // _refs?: []
-  // originalUid: string
-}
 
-export type Position = {
-  blockUid?: string // ref-block uid
-  pageTitle?: string // ref-block is a page-block, use page-title instead of block-uid
-  relation: PositionRelation // position relate to ref-block
+  editTime?: number // TBC, consider to drop
 }
 
 /**
- * - parent-child: 'first' | 'last'
- * - siblings: 'before' | 'after'
- *
+ * In athensresearch, 'Doc' is named as 'Node' and 'Page',
+ * with a concept of node-block (node-page-block), ndoe-title, page-title, page-block (or context-block)
  */
-export type PositionRelation = 'first' | 'last' | 'before' | 'after'
+export type Doc = {
+  title: string // use as id, no duplicated titles area allowed
+  blockUid: string // corresponding root block
+
+  noteCopy?: Note // the latest note by query
+  noteDraftCopy?: NoteDraft // the latest note-draft
+
+  noteMeta?: NoteMeta // updates in note meta
+}
+
+export type EditorProps = {
+  alert: {
+    show?: null
+    message?: null
+    confirmFn?: null
+    cancelFn?: null
+  }
+  leftSidebar: {
+    show: boolean
+    entries: string[]
+  }
+  modal: {
+    discuss?: {
+      id?: string
+      title: string
+    }
+    doc?: {
+      title: string
+    }
+    mainEditorCursor?: {
+      blockUid: string
+      anchor: number
+      offset: number
+    }
+  }
+  route: {
+    symbolMain: string
+    symbolModal?: string
+
+    // (future) when open a block
+    blockUid?: string
+  }
+}
+
+//
+// Server-side Data
+//
+//
+//
+//
+//
+//
+
+type NoteMeta = {
+  webTitle?: string
+  keywords?: string[]
+}
+
+export type Note = {
+  id: string
+  branch: string
+  symbol: string
+  doc: NoteDoc
+}
+
+export type NoteDoc = {
+  id: string
+  userId: string
+  noteMeta: NoteMeta
+  content: Block[]
+}
+
+export type NoteDraft = {
+  id: string
+  content: Block[]
+  fromNoteDocId?: string
+}

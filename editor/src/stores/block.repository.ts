@@ -36,17 +36,14 @@ import {
   switchMap,
   tap,
 } from 'rxjs'
-import { genBlockUid } from '../utils'
-import { getPage, getPageTitle } from './page.repository'
-import { isChildRelation, validatePosition, validateUid } from '../op/helpers'
 import { Block } from '../interfaces'
 
-type BlockState = {
+type BlocksStoreState = {
   entities: Record<string, Block>
   ids: string[]
 }
 
-export type BlockReducer = Reducer<BlockState>
+export type BlockReducer = Reducer<BlocksStoreState>
 
 export type BlockReducerFn = () => BlockReducer[]
 
@@ -111,7 +108,7 @@ class BlockRepository {
    *
    * TODO: undo/redo
    */
-  updateInChain(chainOpFns: BlockReducerFn[]) {
+  updateChain(chainOpFns: BlockReducerFn[]) {
     for (const fn of chainOpFns) {
       blocksStore.update(...fn())
     }

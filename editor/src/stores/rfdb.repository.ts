@@ -128,10 +128,9 @@ export const rfdbStore = createStore(
 )
 
 class RfdbRepository {
-  editingUid$ = rfdbStore.pipe(
-    select((state) => state.editing?.uid),
-    tap((e) => console.log(`editingUid: ${e}`)),
-  )
+  editingUid$ = rfdbStore.pipe(select((state) => state.editing?.uid))
+
+  selectionItems$ = rfdbStore.pipe(select((state) => state.selection.items))
 
   setProps(props: Partial<RfdbProps>) {
     rfdbStore.update(setProps(props))
@@ -151,9 +150,18 @@ class RfdbRepository {
     return rfdbStore.getValue()
   }
 
-  getBlockIsEditing$(uid: string) {
+  // Stream getters
+
+  getIsEditing$(uid: string) {
     return this.editingUid$.pipe(
       map((e) => e === uid),
+      distinctUntilChanged(),
+    )
+  }
+
+  getIsSelected$(uid: string) {
+    return this.selectionItems$.pipe(
+      map((items) => items.includes(uid)),
       distinctUntilChanged(),
     )
   }

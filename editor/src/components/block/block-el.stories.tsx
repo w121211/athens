@@ -2,28 +2,32 @@ import React, { useState } from 'react'
 import { setEntities } from '@ngneat/elf-entities'
 import { ComponentStory, ComponentMeta } from '@storybook/react'
 import { blockRepo } from '../../stores/block.repository'
-import { blocks } from '../../../test/helpers'
 import { BlockEl } from './block-el'
+import { mockLocalData } from '../../services/mock-data'
 
 /**
  * Setup data
  */
-blockRepo.update([setEntities(blocks)])
+blockRepo.update([setEntities(mockLocalData.blocks)])
 
 export default {
   title: 'Block/BlockEl',
   component: BlockEl,
-  // argTypes: {
-  //   backgroundColor: { control: 'color' },
-  // },
 } as ComponentMeta<typeof BlockEl>
 
 const Template: ComponentStory<typeof BlockEl> = (args) => <BlockEl {...args} />
 
 export const Basic = Template.bind({})
 Basic.args = {
-  uid: 'b1',
+  uid: mockLocalData.blocks[0].uid,
+  isEditable: true,
 }
+
+export const WithDocContainerMock = () => (
+  <div className="doc-container">
+    <BlockEl uid="b1" isEditable />
+  </div>
+)
 
 // export const Editing = Template.bind({})
 // Editing.args = {

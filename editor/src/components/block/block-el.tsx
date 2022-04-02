@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react'
 import { useObservable } from '@ngneat/react-rxjs'
+
 import * as events from '../../events'
 import {
   blockDragLeave,
   blockDragOver,
   blockDrop,
+  bulletDragEnd,
+  bulletDragStart,
 } from '../../handlers/drag-handlers'
 import {
   CaretPosition,
@@ -21,6 +24,7 @@ import { BlockContainer } from './block-container'
 import { BlockContent } from './block-content'
 import { DropAreaIndicator } from './drop-area-indicator'
 import { Toggle } from './toggle'
+import { throttle } from 'lodash'
 
 // export const BlockContainer = ({
 //   uid,
@@ -150,10 +154,17 @@ import { Toggle } from './toggle'
  * - block-el <- blocks/core.cljs
  * - Block.tsx
  */
-export const BlockEl = ({ uid }: { uid: string }): JSX.Element | null => {
+export const BlockEl = ({
+  uid,
+  isEditable,
+}: {
+  uid: string
+  isEditable: boolean
+}): JSX.Element | null => {
   const [block] = useObservable(blockRepo.getBlock$(uid)),
     [children] = useObservable(blockRepo.getBlockChildren$(uid)),
-    [isEditing] = useObservable(rfdbRepo.getBlockIsEditing$(uid)),
+    [isEditing] = useObservable(rfdbRepo.getIsEditing$(uid)),
+    [isSelected] = useObservable(rfdbRepo.getIsSelected$(uid)),
     [search, setSearch] = useState<Search>({
       type: null,
       query: null,
@@ -179,7 +190,9 @@ export const BlockEl = ({ uid }: { uid: string }): JSX.Element | null => {
   const { open, str: localStr } = block,
     isOpen = open ?? true,
     childrenBlockEls = useMemo(() => {
-      return children.map((e) => <BlockEl key={e.uid} uid={e.uid} />)
+      return children.map((e) => (
+        <BlockEl key={e.uid} uid={e.uid} isEditable={isEditable} />
+      ))
     }, [children])
 
   return (
@@ -187,35 +200,28 @@ export const BlockEl = ({ uid }: { uid: string }): JSX.Element | null => {
       data-uid={uid}
       data-childrenuids={children.map((e) => e.uid).join(',')}
       className={[
-        children && 'show-tree-indicator',
+        'block-container',
+        children.length > 0 && isOpen && 'show-tree-indicator',
         isOpen ? 'is-open' : 'is-closed',
         // linkedRef && 'is-linked-ref',
         // isLocked && 'is-locked',
-        // isSelected && 'is-selected',
+        isSelected && 'is-selected',
         // presentUser && showPresentUser && 'is-presence',
-        // isSelected && isDragging && 'is-dragging',
+        isSelected && dragging && 'is-dragging',
         isEditing && 'is-editing',
       ]
         .filter(Boolean)
         .join(' ')}
-      //   style={
-      // showPresentUser && presentUser
-      //   ? { '--user-color': presentUser.color }
-      //   : undefined
-      //   }
-      //   onClick={(e) => {
-      // e.stopPropagation()
-      // handlePressContainer && handlePressContainer(e)
-      //   }}
       //   onDragOver={handleDragOver}
       //   onDragLeave={handleDragLeave}
       //   onDrop={handleDrop}
-      onDragOver={(e) => blockDragOver(e, block, setDragTarget)}
+      // onDragOver={(e) => console.log('onDragOver')}
+      onDragOver={(e) => blockDragOver(e, block, setDragTarget)} // TODO: throttle
       onDragLeave={(e) => blockDragLeave(e, block, setDragTarget)}
       onDrop={(e) => blockDrop(e, block, dragTarget, setDragTarget)}
     >
       {dragTarget === 'before' && (
-        <DropAreaIndicator style={{ gridArea: 'below' }} />
+        <DropAreaIndicator style={{ gridArea: 'above' }} />
       )}
 
       <BlockBody
@@ -223,12 +229,12 @@ export const BlockEl = ({ uid }: { uid: string }): JSX.Element | null => {
         onMouseEnter={() => {
           // handleMouseEnterBlock
           // isEditable && setRenderEditableDom(true)
-          setShowEditableDom(true)
+          isEditable && setShowEditableDom(true)
         }}
         onMouseLeave={() => {
           // handleMouseLeaveBlock
           // isEditable && setRenderEditableDom(false)
-          setShowEditableDom(false)
+          isEditable && setShowEditableDom(false)
         }}
       >
         {children.length > 0 && (
@@ -248,8 +254,8 @@ export const BlockEl = ({ uid }: { uid: string }): JSX.Element | null => {
           // block,
           // onClick={(e) => router.navigateUid(uid, e)}
           // onContextMenu={(e) => bulletContextMenu(e, uid, state)}
-          // onDragStart={(e) => bulletDragStart(e, uid, state)}
-          // onDragEnd={(e) => bulletDragEnd(e, uid, state)}
+          onDragStart={(e) => bulletDragStart(e, uid, setDragging)}
+          onDragEnd={() => bulletDragEnd(setDragging)}
         />
 
         <BlockContent
@@ -288,7 +294,7 @@ export const BlockEl = ({ uid }: { uid: string }): JSX.Element | null => {
 // Block.Toggle = Toggle
 // Block.Body = Body
 // Block.Content = Content
-// Block.ListContainer = styled.div`
+// BlockEl.ListContainer = styled.div`
 //   display: flex;
 //   flex-direction: column;
 // `

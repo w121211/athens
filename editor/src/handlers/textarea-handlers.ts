@@ -4,7 +4,7 @@ import * as events from '../events'
 import { blockRepo, getBlock } from '../stores/block.repository'
 import { nextBlock } from '../op/queries'
 import { rfdbRepo } from '../stores/rfdb.repository'
-import { shortcutKey } from '../utils'
+import { getDatasetChildrenUid, getDatasetUid, shortcutKey } from '../utils'
 import { CaretPosition, DestructTextareaKeyEvent, Search } from '../interfaces'
 import { getCaretCoordinates } from './textarea-caret'
 import { MouseEvent } from 'react'
@@ -33,35 +33,35 @@ function findSelectedItems(
   const target = event.target as HTMLElement,
     page = target.closest('.node-page') ?? target.closest('.block-page'),
     blockEls = page && page.querySelectorAll<HTMLElement>('.block-container'),
-    uids = blockEls && [...blockEls].map((e) => getDatasetUid(e)),
-    uids_childrenUids = zipmap(uids, blocks.map(getDatasetChildrenUids)),
-    indexedUids = uids.mapIndexed(vector),
-    startIndex = indexedUids.filter((_idx, uid) => sourceUid === uid),
-    endIndex = indexedUids.filter((_idx, uid) => targetUid === uid),
-    selectedUids = subscribe('select-subs/items'),
-    candidateUids = indexedUids.filter(
-      (idx, _uid) =>
-        Math.min(startIndex, endIndex) <= idx <= Math.max(startIndex, endIndex),
-    ),
-    descendantUids = loop(),
-    toRemoveUids = set.intersect(selectedUids, descendantUids),
-    selectionNewUids = set.difference(candidateUids, descendantUids),
-    newSelectedUids = set.union(
-      set.difference(selectedUids, toRemoveUids),
-      selectionNewUids,
-    ),
-    selectionOrder = indexedUids
-      .filter((_k, v) => newSelectedUids.contains(v))
-      .mapv('second')
+    uids = blockEls && [...blockEls].map((e) => getDatasetUid(e))
+  // uids_childrenUids = zipmap(uids, blocks.map(getDatasetChildrenUids)),
+  // uids_childrenUids = map(uids, blocks.map(getDatasetChildrenUids)),
+  // uids_childrenUids = uids && uids.map(e => [e, getDatasetChildrenUid(el)]),
 
-  if (startIndex && endIndex) {
-    dispatchEvent('select-events/set-items', selectionOrder)
-  }
-}
+  // console.debug(page, blockEls, uids)
 
-function globalMouseup() {
-  document.removeEventListener('mouseup', globalMouseup)
-  events.mouseDownUnset()
+  //   indexedUids = uids.mapIndexed(vector),
+  //   startIndex = indexedUids.filter((_idx, uid) => sourceUid === uid),
+  //   endIndex = indexedUids.filter((_idx, uid) => targetUid === uid),
+  //   selectedUids = subscribe('select-subs/items'),
+  //   candidateUids = indexedUids.filter(
+  //     (idx, _uid) =>
+  //       Math.min(startIndex, endIndex) <= idx <= Math.max(startIndex, endIndex),
+  //   ),
+  //   descendantUids = loop(),
+  //   toRemoveUids = set.intersect(selectedUids, descendantUids),
+  //   selectionNewUids = set.difference(candidateUids, descendantUids),
+  //   newSelectedUids = set.union(
+  //     set.difference(selectedUids, toRemoveUids),
+  //     selectionNewUids,
+  //   ),
+  //   selectionOrder = indexedUids
+  //     .filter((_k, v) => newSelectedUids.contains(v))
+  //     .mapv('second')
+
+  // if (startIndex && endIndex) {
+  //   dispatchEvent('select-events/set-items', selectionOrder)
+  // }
 }
 
 // const textareaPaste = (e, _uid, state) => {
@@ -129,10 +129,17 @@ export function textareaClick(event: MouseEvent, targetUid: string): void {
   }
 }
 
+function globalMouseup() {
+  document.removeEventListener('mouseup', globalMouseup)
+  events.mouseDownUnset()
+}
+
 /**
-   * "Attach global mouseup listener. Listener can't be local because user might let go of mousedown off of a block.
+ * * "Attach global mouseup listener. Listener can't be local because user might let go of mousedown off of a block.
     See https://javascript.info/mouse-events-basics#events-order"
-   */
+ * 
+ *
+ */
 export function textareaMouseDown(e: MouseEvent) {
   e.stopPropagation()
   if (!e.shiftKey) {
@@ -147,16 +154,19 @@ export function textareaMouseDown(e: MouseEvent) {
 }
 
 /**
-   * "When mouse-down, user is selecting multiple blocks with click+drag.
+ * "When mouse-down, user is selecting multiple blocks with click+drag.
     Use same algorithm as shift-enter, only updating the source and target."
-   */
-export function textareaMouseEnter() {
-  const { editing, mouseDown } = rfdbRepo.getValue(),
-    sourceUid = editing?.uid
+ * 
+ * @bug firefox only, when current mouse is down, onMouseEnter event won't fire and jamed until mouse is up
+ */
+export function textareaMouseEnter(e: MouseEvent, targetUid: string) {
+  const {
+    editing: { uid: sourceUid },
+    mouseDown,
+  } = rfdbRepo.getValue()
 
-  // if (mouseDown) {
-  //   events.selectionClear()
-  //   findSelectedItems(e, sourceUid, targetUid)
-  //   rfdbRepo.setProps({ selection: { items: [] } })
-  // }
+  if (mouseDown && sourceUid) {
+    events.selectionClear()
+    findSelectedItems(e, sourceUid, targetUid)
+  }
 }

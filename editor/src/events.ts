@@ -1,23 +1,35 @@
-import { editingFocus, navigate, setCursorPosition } from './effects'
+import { editingFocus, setCursorPosition } from './effects'
 import {
   Block,
   DestructTextareaKeyEvent,
-  Position,
-  PositionRelation,
+  BlockPositionRelation,
+  Doc,
 } from './interfaces'
 import * as ops from './op/ops'
 import { areSameParent, compatPosition } from './op/helpers'
 import {
   BlockReducer,
   blockRepo,
-  blocksStore,
   getBlock,
   getBlockChildren,
 } from './stores/block.repository'
 import { rfdbRepo } from './stores/rfdb.repository'
 import { genBlockUid } from './utils'
-import { isInteger, isNumber } from 'lodash'
+import { isInteger } from 'lodash'
 import { nextBlock, nthSiblingBlock, prevBlock } from './op/queries'
+import { docRepo, getDoc } from './stores/doc.repository'
+import { draftService } from './services/draft.service'
+import { editorRepo } from './stores/editor.repository'
+import { noteService } from './services/note.service'
+
+//
+// Key-down Events
+//
+//
+//
+//
+//
+//
 
 export function up(uid: string, targetPos: number | 'end') {
   const block = getBlock(uid),
@@ -64,12 +76,7 @@ export function backspace(
   ) {
     return
   }
-  if (
-    children.length === 0 &&
-    parent.pageTitle &&
-    order === 0 &&
-    value === ''
-  ) {
+  if (children.length === 0 && parent.docTitle && order === 0 && value === '') {
     backspaceDeleteOnlyChild(block)
     return
   }
@@ -107,7 +114,7 @@ export function enter(uid: string, dKeyDown: DestructTextareaKeyEvent) {
   const block = getBlock(uid),
     hasChildren = block.childrenUids.length > 0,
     parent = block.parentUid && getBlock(block.parentUid),
-    parentIsRootBlock = (parent && parent.pageTitle) !== undefined,
+    parentIsRootBlock = (parent && parent.docTitle) !== undefined,
     // contextRootUid = rfdbRepo.currentRoute.pathParams.id,  // contextRoot: the block opened as root
     contextRootUid = undefined,
     newUid = genBlockUid(),
@@ -138,10 +145,10 @@ export function enter(uid: string, dKeyDown: DestructTextareaKeyEvent) {
 function blockSaveBlockMoveCompositeOp(
   sourceBlock: Block,
   refUid: string,
-  relation: PositionRelation,
+  relation: BlockPositionRelation,
   str: string,
 ): [BlockReducer[], BlockReducer[]] {
-  const location = compatPosition({ blockUid: refUid, relation })
+  const location = compatPosition({ refBlockUid: refUid, relation })
   return [
     ops.blockSaveOp(sourceBlock.uid, str),
     ops.blockMoveOp(sourceBlock, location),
@@ -150,7 +157,7 @@ function blockSaveBlockMoveCompositeOp(
 
 function getPrevSiblingBlockAndTargetRel(
   block: Block,
-): [Block | null, PositionRelation] {
+): [Block | null, BlockPositionRelation] {
   const parent = block.parentUid ? getBlock(block.parentUid) : null,
     prevSib = parent && nthSiblingBlock(block, parent, -1),
     targetRel = prevSib && prevSib.childrenUids.length > 0 ? 'last' : 'first'
@@ -220,7 +227,7 @@ export function unindent(
     //   contextRootUid === parent.uid,
     { start, end } = dKeyDown
 
-  if (parent && parent.pageTitle === undefined) {
+  if (parent && parent.docTitle === undefined) {
     const [saveOp, moveOp] = blockSaveBlockMoveCompositeOp(
       block,
       parent.uid,
@@ -240,19 +247,26 @@ export function unindentMulti(uids: string[]) {
     parent = firstBlock.parentUid ? getBlock(firstBlock.parentUid) : null,
     sameParent_ = areSameParent(blocks)
 
-  if (parent && parent.pageTitle === undefined && sameParent_) {
+  if (parent && parent.docTitle === undefined && sameParent_) {
     dropMultiSiblings(uids, parent.uid, 'after')
   }
 }
 
+//
 // Backspace Events
+//
+//
+//
+//
+//
+//
 
 export function backspaceDeleteMergeBlock(
   block: Block,
   value: string,
   prevBlock: Block,
 ) {
-  blockRepo.updateInChain(ops.blockMergeChainOp(block, prevBlock, value))
+  blockRepo.updateChain(ops.blockMergeChainOp(block, prevBlock, value))
   editingUid(prevBlock.uid, prevBlock.str.length)
 }
 
@@ -263,7 +277,7 @@ export function backspaceDeleteMergeBlockWithSave(
   prevBlock: Block,
   localUpdate?: string,
 ) {
-  blockRepo.updateInChain(
+  blockRepo.updateChain(
     ops.blockMergeWithUpdatedChainOp(block, prevBlock, value, localUpdate),
   )
   editingUid(prevBlock.uid, localUpdate?.length)
@@ -274,16 +288,23 @@ export function backspaceDeleteOnlyChild(block: Block) {
   editingUid(null)
 }
 
-// Block events
+//
+// Block Events
+//
+//
+//
+//
+//
+//
 
 export function blockMove(
   sourceUid: string,
   targetUid: string,
-  targetRel: PositionRelation,
+  targetRel: BlockPositionRelation,
 ) {
   const block = getBlock(sourceUid)
   blockRepo.update(
-    ops.blockMoveOp(block, { blockUid: targetUid, relation: targetRel }),
+    ops.blockMoveOp(block, { refBlockUid: targetUid, relation: targetRel }),
   )
 }
 
@@ -295,18 +316,25 @@ export function blockSave(uid: string, str: string) {
   const block = getBlock(uid),
     doNothing = block.str === str
 
-  if (block.pageTitle) {
-    throw new Error('blockSave::node-block not allow to change string')
+  if (block.docTitle) {
+    throw new Error('[blockSave] doc-block not allow to change string')
   }
   if (!doNothing) {
     blockRepo.update(ops.blockSaveOp(uid, str))
   }
 }
 
-// ------ Drop Events (Drag & Drop) ------
+//
+// Drop Events
+//
+//
+//
+//
+//
+//
 
 export function dropMultiChild(sourceUids: string[], targetUid: string) {
-  blockRepo.updateInChain(ops.blockMoveChainOp(targetUid, sourceUids, 'first'))
+  blockRepo.updateChain(ops.blockMoveChainOp(targetUid, sourceUids, 'first'))
 }
 
 /**
@@ -316,14 +344,19 @@ export function dropMultiChild(sourceUids: string[], targetUid: string) {
 export function dropMultiSiblings(
   sourceUids: string[],
   targetUid: string,
-  dragTarget: PositionRelation,
+  dragTarget: BlockPositionRelation,
 ) {
-  blockRepo.updateInChain(
-    ops.blockMoveChainOp(targetUid, sourceUids, dragTarget),
-  )
+  blockRepo.updateChain(ops.blockMoveChainOp(targetUid, sourceUids, dragTarget))
 }
 
+//
 // Editing Events
+//
+//
+//
+//
+//
+//
 
 export function editingTarget(target: HTMLTextAreaElement) {
   const uid = target.id.split('editable-uid-')[1]
@@ -335,17 +368,30 @@ export function editingUid(uid: string | null, cursorAnchor?: number | 'end') {
   editingFocus(uid, cursorAnchor)
 }
 
-// ------ Enter Events ------
+//
+// Enter Events
+//
+//
+//
+//
+//
+//
 
 export function enterAddChild(block: Block, newUid: string) {
-  const position = compatPosition({ blockUid: block.uid, relation: 'first' }),
+  const position = compatPosition({
+      refBlockUid: block.uid,
+      relation: 'first',
+    }),
     op = ops.blockNewOp(newUid, position)
   blockRepo.update(op)
   editingUid(newUid)
 }
 
 export function enterBumpUp(block: Block, newUid: string) {
-  const position = compatPosition({ blockUid: block.uid, relation: 'before' }),
+  const position = compatPosition({
+      refBlockUid: block.uid,
+      relation: 'before',
+    }),
     op = ops.blockNewOp(newUid, position)
   blockRepo.update(op)
   editingUid(newUid)
@@ -354,7 +400,7 @@ export function enterBumpUp(block: Block, newUid: string) {
 // export function enterNewBlock(block: Block, parent: Block, newUid: string) {
 export function enterNewBlock(block: Block, newUid: string) {
   blockRepo.update(
-    ops.blockNewOp(newUid, { blockUid: block.uid, relation: 'after' }),
+    ops.blockNewOp(newUid, { refBlockUid: block.uid, relation: 'after' }),
   )
   editingUid(newUid)
 }
@@ -364,9 +410,9 @@ export function enterSplitBlock(
   newUid: string,
   value: string,
   index: number,
-  relation: PositionRelation,
+  relation: BlockPositionRelation,
 ) {
-  blockRepo.updateInChain(
+  blockRepo.updateChain(
     ops.blockSplitChainOp(block, newUid, value, index, relation),
   )
   editingUid(newUid)
@@ -376,9 +422,16 @@ export function enterSplitBlock(
  * ;; Triggered when there is a closed embeded block with no content in the top level block
   ;; and then one presses enter in the embeded block.
  */
-function enterOpenBlockAddChild() {}
+// function enterOpenBlockAddChild() {}
 
+//
 // Mouse Events
+//
+//
+//
+//
+//
+//
 
 export function mouseDownSet() {
   rfdbRepo.updateMouseDown(true)
@@ -388,31 +441,25 @@ export function mouseDownUnset() {
   rfdbRepo.updateMouseDown(false)
 }
 
-// Page Events
+//
+// Search Events
+//
+//
+//
+//
+//
+//
 
-function pageMerge() {}
+export function search(uids: string[]) {}
 
-export function pageNew(title: string, blockUid: string, shift?: true) {
-  blockRepo.pageNewOp(title, blockUid)
-  pageNewFollowup(title, shift)
-  editingUid(blockUid)
-}
-
-export function pageNewFollowup(title: string, shift?: true) {
-  const pageUid = blockRepo.getPageUid(title)
-  if (shift) {
-    // rightSidebarOpenItem(pageUid)
-  } else {
-    navigate({ page: { id: pageUid } })
-  }
-}
-
-function pageRename(oldName: string, newName: string, callback: () => void) {
-  blockRepo.renamePage(oldName, newName)
-  callback()
-}
-
+//
 // Selction Events
+//
+//
+//
+//
+//
+//
 
 export function selectionSetItems(uids: string[]) {
   rfdbRepo.updateSelectionItems(uids)
@@ -448,6 +495,143 @@ export function selectionAddItem(
   }
 }
 
-export function selectionDelete() {}
+export function selectionDelete() {
+  const selectedUids = rfdbRepo.getValue().selection.items,
+    chain = ops.blockRemoveManyChainOp(selectedUids)
 
-export function selectionClear() {}
+  blockRepo.updateChain(chain)
+  rfdbRepo.updateSelectionItems([])
+  editingUid(null)
+}
+
+export function selectionClear() {
+  rfdbRepo.updateSelectionItems([])
+}
+
+//
+// Doc Events
+//
+//
+//
+//
+//
+//
+
+// function pageMerge() {}
+
+// export function pageNew(title: string, blockUid: string, shift?: true) {
+//   blockRepo.pageNewOp(title, blockUid)
+//   pageNewFollowup(title, shift)
+//   editingUid(blockUid)
+// }
+
+// export function pageNewFollowup(title: string, shift?: true) {
+//   const pageUid = blockRepo.getPageUid(title)
+//   if (shift) {
+//     // rightSidebarOpenItem(pageUid)
+//   } else {
+//     navigate({ page: { id: pageUid } })
+//   }
+// }
+
+// function pageRename(oldName: string, newName: string, callback: () => void) {
+//   blockRepo.renamePage(oldName, newName)
+//   callback()
+// }
+
+/**
+ * If local-doc found, do nothing
+ * If local-doc not found, find remote-note-draft
+ * If remote-note-draft not found, create local-doc from note-doc
+ * If note-doc not found, create new local-doc
+ *
+ */
+export async function docOpen(title: string) {
+  if (docRepo.findDoc(title)) {
+    console.debug('found local-doc, return ' + title)
+    return
+  }
+
+  const [note, draft] = await Promise.all([
+      noteService.queryNote(title),
+      draftService.queryDraft(title),
+    ]),
+    op = draft ? ops.docLoadOp(title, draft, note) : ops.docNewOp(title, note)
+
+  blockRepo.update(op.blockReducers)
+  docRepo.update(op.docReducers)
+}
+
+/**
+ * Save doc on remote
+ */
+export async function docSave(doc: Doc) {}
+
+/**
+ * Remove doc from local and remote if possible
+ */
+export async function docRemove(doc: Doc) {
+  if (doc.noteDraftCopy) {
+    // update remote
+  }
+}
+
+export async function editorChangeSymbolMain(symbol: string) {
+  const { route } = editorRepo.getValue(),
+    doc = getDoc(route.symbolMain)
+
+  if (doc.noteDraftCopy) {
+    await docSave(doc)
+  } else {
+    await docRemove(doc)
+  }
+  await docOpen(symbol)
+  editorRepo.updateRoute({ ...route, symbolMain: symbol })
+}
+
+export async function editorChangeSymbolModal(symbol?: string) {
+  const { route } = editorRepo.getValue(),
+    doc = route.symbolModal ? getDoc(route.symbolModal) : null
+
+  if (doc) {
+    if (doc.noteDraftCopy) {
+      await docSave(doc)
+    } else {
+      await docRemove(doc)
+    }
+  }
+  if (symbol) await docOpen(symbol)
+
+  editorRepo.updateRoute({ ...route, symbolModal: symbol })
+}
+
+/**
+ * Check is main-symbol or modal-symbol has changed by comparing with current value,
+ * only one symbol can change at one time
+ *
+ * - main symbol changed
+ * - modal symbol added
+ * - modal symbol removed
+ * - modal symbol changed
+ *
+ * For current opened-doc,
+ * - If got draft, save doc
+ * - If no draft, remove doc
+ */
+export async function editorRouteChange(
+  symbol: string,
+  modal?: { symbol: string },
+) {
+  console.debug('[editorRouteChange] ' + symbol)
+
+  const { route } = editorRepo.getValue()
+
+  const mainSymbolChanged = symbol !== route.symbolMain,
+    modalSymbolChanged = modal?.symbol !== route.symbolModal
+
+  if (mainSymbolChanged) {
+    editorChangeSymbolMain(symbol)
+  } else if (modalSymbolChanged) {
+    editorChangeSymbolModal(modal?.symbol)
+  }
+}

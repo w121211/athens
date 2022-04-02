@@ -16,7 +16,7 @@ export const AnchorButton = styled.button`
   cursor: pointer;
   appearance: none;
   border: 0;
-  background: transparent;
+  // background: transparent;
   transition: all 0.05s ease;
   color: inherit;
   margin-right: 0.25em;
@@ -144,6 +144,8 @@ export interface AnchorProps extends TooltipTriggerProps {
 
 /**
  * A handle and indicator of a block's position in the document
+ *
+ * @bug firefox draggable won't work, possibly caused by styled-component
  */
 export const Anchor = (props: AnchorProps) => {
   const { isClosedWithChildren, anchorElement, shouldShowDebugDetails } = props,
@@ -158,11 +160,21 @@ export const Anchor = (props: AnchorProps) => {
 
   return (
     <>
+      {/* <button
+        draggable={true}
+        onDragStart={(e) => {
+          console.log('onDragStart')
+        }}
+        onDragEnd={(e) => {
+          console.log('onDragEnd')
+        }}
+      >
+        firefox drag-drop works here
+      </button> */}
       <AnchorButton
-        className={[
-          'anchor',
-          isClosedWithChildren && 'closed-with-children',
-        ].join(' ')}
+        className={['anchor', isClosedWithChildren && 'closed-with-children']
+          .filter(Boolean)
+          .join(' ')}
         ref={ref}
         draggable={true}
         {...mergeProps(props, focusProps, triggerProps)}

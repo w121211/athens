@@ -344,12 +344,11 @@ export const BlockContent = ({
         id={'editable-uid-' + uid}
         data-testid="block-content-textarea"
         // className={['textarea', empty(selectedItems) && editing ? 'is-editing' : undefined].join('')}
-        style={{ lineHeight: '1.40em' }}
+        // style={{ lineHeight: '1.40em' }}
         rows={1}
         value={localStr}
         onChange={(e) => textareaChange(e, uid)}
         // onPaste={(e) => textareaPaste(e, uid, state)}
-        // onKeyDown={(e) => textareaKeyDown(e, uid, editing, state, setState)}
         onKeyDown={(event) =>
           textareaKeyDown({
             event,
@@ -365,8 +364,8 @@ export const BlockContent = ({
         }
         // onBlur={state.str.saveFn}
         onClick={(e) => textareaClick(e, uid)}
-        onMouseEnter={(e) => textareaMouseEnter()}
         onMouseDown={(e) => textareaMouseDown(e)}
+        onMouseEnter={(e) => textareaMouseEnter(e, uid)}
       />
     )}
     <div className="rendered-content">{localStr}</div>

@@ -59,7 +59,9 @@ export function editingFocus(uid: string | null, index?: number | 'end') {
  */
 export function setCursorPosition(uid: string, start: number, end: number) {
   setTimeout(() => {
-    const target = document.querySelector<HTMLTextAreaElement>('#editable-uid-' + uid)
+    const target = document.querySelector<HTMLTextAreaElement>(
+      '#editable-uid-' + uid,
+    )
     if (target) {
       target.focus()
       target.selectionStart = start
@@ -68,7 +70,14 @@ export function setCursorPosition(uid: string, start: number, end: number) {
   }, 100)
 }
 
+//
 // Routing
+//
+//
+//
+//
+//
+//
 
 export function navigate() {
   // TODO

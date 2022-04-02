@@ -259,20 +259,6 @@ import { BlockContainer } from '../block/block-container'
 //     }
 // }
 
-const NoteBlockChildren = ({ uid }: { uid: string }): JSX.Element => {
-  const [children] = useObservable(blockRepo.getBlockChildren$(uid))
-  return (
-    <>
-      {children.map((child) => {
-        const { uid } = child
-        return <BlockContainer key={uid} uid={uid} />
-      })}
-    </>
-  )
-}
-
-// const NoteContainer = ({ uid }: { uid: string }): JSX.Element => {}
-
 export const NotePage = ({ ident }: { ident: string }): JSX.Element => {
   // const [state, setState] = useState(initState)
   // const unlinkedRefs = atom([])

@@ -1,8 +1,8 @@
 import { hasEntity } from '@ngneat/elf-entities'
-import { getPage, getPageTitle } from '../stores/page.repository'
 import { blocksStore, getBlock } from '../stores/block.repository'
-import { Block, Position, PositionRelation } from '../interfaces'
+import { Block, BlockPosition, BlockPositionRelation } from '../interfaces'
 import { allDescendants } from './queries'
+import { getDoc } from '../stores/doc.repository'
 
 /**
  * Helpers for blocks-store, no mutations are allowed here
@@ -24,18 +24,36 @@ import { allDescendants } from './queries'
   and athens.common-events.graph.schema/sibling-position for others.
   It's safe to use a position that does not need coercing of any arguments, like the output formats."
  */
-export function compatPosition({ blockUid, pageTitle, relation }: Position) {
-  if (blockUid === undefined && pageTitle === undefined) {
-    throw ''
+export function compatPosition({
+  refBlockUid,
+  docTitle,
+  relation,
+}: BlockPosition) {
+  if (refBlockUid === undefined && docTitle === undefined) {
+    throw new Error('refBlockUid === undefined && docTitle === undefined')
   }
 
-  const block = blockUid && getBlock(blockUid),
-    title = block && block.pageTitle
+  const block = refBlockUid ? getBlock(refBlockUid) : null,
+    title = (block && block.docTitle) ?? undefined
 
   return {
+    refBlockUid,
+    docTitle: docTitle ? docTitle : title,
     relation,
-    pageTitle: pageTitle ? pageTitle : title,
-    blockUid,
+  }
+}
+
+export function getRefBlockOfPosition(position: BlockPosition): Block {
+  const { refBlockUid: refUid, docTitle: refTitle, relation } = position
+
+  if (refTitle) {
+    const refDoc = getDoc(refTitle),
+      refBlock = getBlock(refDoc.blockUid)
+    return refBlock
+  } else if (refUid) {
+    return getBlock(refUid)
+  } else {
+    throw new Error('refTitle === undefined && refUid === undefined')
   }
 }
 
@@ -43,23 +61,34 @@ export function blocksDict(blocks: Block[]): Record<string, Block> {
   return Object.fromEntries(blocks.map((e) => [e.uid, e]))
 }
 
+//
 // Validaters
+//
+//
+//
+//
+//
+//
 
 export function validatePosition({
-  blockUid: uid,
-  pageTitle: title,
-}: Position) {
-  const titleBlockUid = title && getPage(title).blockUid,
-    uidTitle = uid && getPageTitle(uid)
+  refBlockUid: uid,
+  docTitle: title,
+}: BlockPosition) {
+  const titleBlockUid = title && getDoc(title).blockUid,
+    block = uid ? getBlock(uid) : null
 
   let failMsg: string | undefined
-  if (uid && uidTitle) {
+  if (block && block.docTitle) {
     failMsg =
-      '[validatePosition] Location uid is a page, location must use title instead.'
-  } else if (title && !titleBlockUid) {
+      '[validatePosition] Location uid is a doc, location must use title instead.'
+  } else if (title && titleBlockUid === undefined) {
     failMsg = '[validatePosition] Location title does not exist:' + title
-  } else if (uid && !getBlock(uid)) {
-    failMsg = '[validatePosition] Location uid does not exist:' + uid
+  } else if (uid) {
+    try {
+      getBlock(uid)
+    } catch (err) {
+      failMsg = '[validatePosition] Location uid does not exist:' + uid
+    }
   }
 
   if (failMsg) {
@@ -135,11 +164,11 @@ export function isDescendant(a: Block, b: Block): boolean {
   return found !== undefined
 }
 
-export function isChildRelation(relation: PositionRelation): boolean {
+export function isChildRelation(relation: BlockPositionRelation): boolean {
   return ['first', 'last'].includes(relation)
 }
 
-export function isSiblingRelation(relation: PositionRelation): boolean {
+export function isSiblingRelation(relation: BlockPositionRelation): boolean {
   return ['before', 'after'].includes(relation)
 }
 

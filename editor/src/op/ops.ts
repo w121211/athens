@@ -10,15 +10,25 @@ import {
   updateEntities,
 } from '@ngneat/elf-entities'
 import assert from 'assert'
-import { Block, Position, PositionRelation } from '../interfaces'
+import {
+  Block,
+  BlockPosition,
+  BlockPositionRelation,
+  Note,
+  NoteDraft,
+} from '../interfaces'
 import {
   BlockReducer,
   BlockReducerFn,
+  blockRepo,
+  blocksStore,
   getBlock,
   getBlockChildren,
 } from '../stores/block.repository'
-import { getPage, getPageTitle } from '../stores/page.repository'
+import { DocReducer, getDoc } from '../stores/doc.repository'
+import { genBlockUid } from '../utils'
 import {
+  getRefBlockOfPosition,
   isChildRelation,
   isDescendant,
   validatePosition,
@@ -27,15 +37,27 @@ import {
 import { insert, moveBetween, moveWithin, remove, reorder } from './order'
 import { allDescendants } from './queries'
 
+//
 // Helpers
+//
+//
+//
+//
+//
+//
 
 function reorderOps(reorderBlocks: Block[]): BlockReducer[] {
   return reorderBlocks.map((e) => updateEntities(e.uid, { order: e.order }))
 }
 
-// function consequenceOps() {}
-
-// ------ Block Atomic Ops ------
+//
+// Block Atomic Ops
+//
+//
+//
+//
+//
+//
 
 /**
  * Move a block, fails if it has children
@@ -49,25 +71,19 @@ function reorderOps(reorderBlocks: Block[]): BlockReducer[] {
  */
 export function blockMoveOp(
   block: Block,
-  position: Position,
+  position: BlockPosition,
   opts: { validate: boolean } = { validate: true },
 ): BlockReducer[] {
-  // in case of consequence-ops, validation will fail since the required block is not yet existed
-  if (opts.validate) {
-    validatePosition(position)
-  }
-
-  if (getPageTitle(block.uid) !== null || block.parentUid === null) {
+  if (block.parentUid === null) {
     console.error(block)
     throw new Error(
       '[blockMoveOp] block to be moved is a page, cannot move pages.',
     )
   }
+  validatePosition(position)
 
-  const { blockUid: _refUid, pageTitle: refTitle, relation } = position,
-    refPage = refTitle ? getPage(refTitle) : null,
-    refUid = _refUid ?? refPage?.blockUid ?? null,
-    refBlock = refUid ? getBlock(refUid) : null,
+  const { relation } = position,
+    refBlock = getRefBlockOfPosition(position),
     refChildRelation = isChildRelation(relation),
     refBlockParent =
       refBlock && refBlock.parentUid ? getBlock(refBlock.parentUid) : null,
@@ -147,14 +163,15 @@ export function blockMoveOp(
  * - update parent->children order
  *
  */
-export function blockNewOp(newUid: string, position: Position): BlockReducer[] {
+export function blockNewOp(
+  newUid: string,
+  position: BlockPosition,
+): BlockReducer[] {
   validatePosition(position)
   validateUid(newUid)
 
-  const { blockUid: _refUid, pageTitle: refTitle, relation } = position,
-    refPage = refTitle ? getPage(refTitle) : null,
-    refUid = _refUid ?? refPage?.blockUid ?? null,
-    refBlock = refUid ? getBlock(refUid) : null,
+  const { relation } = position,
+    refBlock = getRefBlockOfPosition(position),
     refChildRelation = isChildRelation(relation),
     refBlockParent =
       refBlock && refBlock.parentUid ? getBlock(refBlock.parentUid) : null,
@@ -239,7 +256,14 @@ export function blockSaveOp(uid: string, str: string): BlockReducer[] {
   return [updateEntities(uid, { str, editTime: Date.now() })]
 }
 
-// ------ Chain Ops ------
+//
+// Chain Ops
+//
+//
+//
+//
+//
+//
 
 /**
  * "Creates `:block/remove` & `:block/save` ops.
@@ -282,7 +306,7 @@ export function blockMergeChainOp(
   const fns: BlockReducerFn[] = removeBlock.childrenUids.map((e) => {
     const block = getBlock(e)
     return () =>
-      blockMoveOp(block, { blockUid: mergeBlock.uid, relation: 'last' })
+      blockMoveOp(block, { refBlockUid: mergeBlock.uid, relation: 'last' })
   })
   fns.push(() => blockRemoveOp(removeBlock))
   fns.push(() => blockSaveOp(mergeBlock.uid, mergeBlock.str + value))
@@ -330,7 +354,7 @@ export function blockMergeWithUpdatedChainOp(
   const fns: BlockReducerFn[] = removeBlock.childrenUids.map((e) => {
     const block = getBlock(e)
     return () =>
-      blockMoveOp(block, { blockUid: mergeBlock.uid, relation: 'last' })
+      blockMoveOp(block, { refBlockUid: mergeBlock.uid, relation: 'last' })
   })
   fns.push(() => blockRemoveOp(removeBlock))
   fns.push(() => blockSaveOp(mergeBlock.uid, updateValue + value))
@@ -352,7 +376,7 @@ export function blockMergeWithUpdatedChainOp(
 export function blockMoveChainOp(
   targetUid: string,
   sourceUids: string[],
-  firstRel: PositionRelation,
+  firstRel: BlockPositionRelation,
 ): BlockReducerFn[] {
   // TODO: validate source-uids are siblings
 
@@ -370,16 +394,27 @@ export function blockMoveChainOp(
 
   const first = getBlock(sourceUids[0]),
     fns: BlockReducerFn[] = [
-      () => blockMoveOp(first, { blockUid: targetUid, relation: firstRel }),
+      () => blockMoveOp(first, { refBlockUid: targetUid, relation: firstRel }),
     ]
 
   for (let i = 0; i < sourceUids.length - 1; i++) {
     const one = sourceUids[i],
       two = sourceUids[i + 1],
       two_ = getBlock(two)
-    fns.push(() => blockMoveOp(two_, { blockUid: one, relation: 'after' }))
+    fns.push(() => blockMoveOp(two_, { refBlockUid: one, relation: 'after' }))
   }
   return fns
+}
+
+/**
+ *
+ */
+export function blockRemoveManyChainOp(removeUids: string[]): BlockReducerFn[] {
+  const chainOps: BlockReducerFn[] = removeUids.map((e) => {
+    const block = getBlock(e)
+    return () => blockRemoveOp(block)
+  })
+  return chainOps
 }
 
 /**
@@ -396,7 +431,7 @@ export function blockSplitChainOp(
   newBlockUid: string,
   str: string,
   idx: number,
-  relation: PositionRelation,
+  relation: BlockPositionRelation,
 ): BlockReducerFn[] {
   // const saveOp = () => blockSaveOp(oldBlock.uid, str.substring(0, idx)),
   //   newOp = () => blockNewOp(newBlockUid, { blockUid: oldBlock.uid, relation }),
@@ -422,7 +457,7 @@ export function blockSplitChainOp(
     () => blockSaveOp(oldBlock.uid, str.substring(0, idx)),
 
     // create new block
-    () => blockNewOp(newBlockUid, { blockUid: oldBlock.uid, relation }),
+    () => blockNewOp(newBlockUid, { refBlockUid: oldBlock.uid, relation }),
 
     // save new-block
     () => blockSaveOp(newBlockUid, str.substring(idx)),
@@ -433,19 +468,139 @@ export function blockSplitChainOp(
   return chains
 }
 
-// ------ Page Ops ------
-
-// export function pageNewOp(): [PageReducer[], BlockReducer[]] {
-//   // const newBlockOp = blockNewOp()
+//
+// Doc Ops
+//
+//
+//
+//
+//
+//
+// export function docNewOp(title: string, blockUid: string): DocReducer[] {
+//   // draftExists
+//   // const block = blocksStore.query(searchEntity)
+//   // // const pageExists = eByAv('node/title', title)
+//   // if (pageExists) {
+//   //   const pageUid = genBlockUid(),
+//   //     page: Block = {
+//   //       ndoeTitle: title,
+//   //       uid: pageUid,
+//   //       childrenUids: [],
+//   //     }
+//   //   return [addEntities(page)]
+//   // }
+//   // return []
 // }
 
-// export function pageRenameOp() {}
+/**
+ *
+ */
+export function docLoadOp(
+  title: string,
+  noteDraft: NoteDraft,
+  note: Note | null,
+): {
+  blockReducers: BlockReducer[]
+  docReducers: DocReducer[]
+} {
+  const { content } = noteDraft
+  const docBlock = content.find((e) => e.docTitle === title)
 
-// export function pageMergeOp() {}
+  if (docBlock === undefined)
+    throw new Error(
+      '[docLoadOp] corresponding doc-block not found in noteDraft.blocks',
+    )
 
-// export function pageRemoveOp() {}
+  return {
+    blockReducers: [addEntities(content)],
+    docReducers: [
+      addEntities({
+        title,
+        blockUid: docBlock.uid,
+        note,
+        noteDraft,
+      }),
+    ],
+  }
+}
 
-// // ------ Shortcut Ops ------
+/**
+ *
+ */
+export function docNewOp(
+  title: string,
+  note: Note | null,
+): {
+  blockReducers: BlockReducer[]
+  docReducers: DocReducer[]
+} {
+  if (note) {
+    const { doc: noteDoc } = note,
+      docBlock = noteDoc.content.find((e) => e.docTitle === title)
+
+    if (docBlock === undefined)
+      throw new Error(
+        '[docNewOp] corresponding doc-block not found in note.doc.content',
+      )
+
+    const newDoc = {
+      title,
+      blockUid: docBlock.uid,
+      note,
+    }
+    return {
+      blockReducers: [addEntities(noteDoc.content)],
+      docReducers: [addEntities(newDoc)],
+    }
+  } else {
+    const newDocBlock = {
+        uid: genBlockUid(),
+        str: title,
+        docTitle: title,
+        open: true,
+        order: 0,
+        parentUid: null,
+        childrenUids: [],
+      },
+      newDoc = {
+        title,
+        blockUid: newDocBlock.uid,
+      }
+    return {
+      blockReducers: [addEntities([newDocBlock])],
+      docReducers: [addEntities(newDoc)],
+    }
+  }
+}
+
+/**
+ *
+ */
+export function docRenameOp() {
+  //
+}
+
+/**
+ *
+ */
+export function docRemoveOp(title: string): DocReducer[] {
+  // const pageUid = getPageUid(title)
+  // if (pageUid) {
+  //   const retractBlocks = retractUidRecursively(pageUid)
+  //   // deleteLinkedRefs = null,
+  //   return [retractBlocks]
+  // }
+  // return []
+}
+
+//
+// Shortcut Ops
+//
+//
+//
+//
+//
+//
 
 // export function shortcutNewOp() {}
 

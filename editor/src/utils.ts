@@ -1,5 +1,5 @@
-import { DragEvent } from 'react'
-import { KeyboardEvent } from 'react'
+import { nanoid } from 'nanoid'
+import { DragEvent, KeyboardEvent } from 'react'
 
 export function destructKeyDown(e: KeyboardEvent) {
   const key = e.code, // key = e.keyCode,
@@ -31,17 +31,34 @@ export function shortcutKey(meta: boolean, ctrl: boolean) {
   return false
 }
 
+/**
+ * TODO: ensure decentralized client's block-uid will not conflict @eg include user-id as part of id?
+ *
+ */
 export function genBlockUid(): string {
-  // return cuid()
-  return '' + Math.floor(Math.random() * 1000)
+  return nanoid()
 }
 
-// ------ DOM ------
+//
+// DOM
+//
+//
+//
+//
+//
+//
+//
 
 export function getDatasetUid(el: HTMLElement): string | null {
-  const block = el && el.closest('.block-container'),
+  const block = el.closest('.block-container'),
     uid = block && block.getAttribute('data-uid')
   return uid
+}
+
+export function getDatasetChildrenUid(el: HTMLElement): string[] | null {
+  const block = el.closest('.block-container'),
+    childrenuids = block && block.getAttribute('data-childrenuids')?.split(',')
+  return childrenuids ?? null
 }
 
 /**
@@ -60,7 +77,15 @@ export function verticalCenter(el: Element) {
   return y
 }
 
-// ------ Regex ------
+//
+// Regex
+//
+//
+//
+//
+//
+//
+//
 
 /**
  * Take a string and escape all regex special characters in it
