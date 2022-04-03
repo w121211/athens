@@ -7,6 +7,8 @@ interface IDraftService {
   queryMyAllDrafts(): Promise<Partial<NoteDraft>[] | null>
 
   saveDraft(draftInput: NoteDraft, id?: string): Promise<NoteDraft>
+
+  removeDraft(id: string): Promise<{ success: true }>
 }
 
 class MockDraftService implements IDraftService {
@@ -30,6 +32,10 @@ class MockDraftService implements IDraftService {
   }
 
   async saveDraft(draftInput: NoteDraft, id?: string): Promise<NoteDraft> {
+    throw new Error('not implemented')
+  }
+
+  async removeDraft(id: string): Promise<{ success: true }> {
     throw new Error('not implemented')
   }
 }

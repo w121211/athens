@@ -517,8 +517,6 @@ export function selectionClear() {
 //
 //
 
-// function pageMerge() {}
-
 // export function pageNew(title: string, blockUid: string, shift?: true) {
 //   blockRepo.pageNewOp(title, blockUid)
 //   pageNewFollowup(title, shift)
@@ -532,11 +530,6 @@ export function selectionClear() {
 //   } else {
 //     navigate({ page: { id: pageUid } })
 //   }
-// }
-
-// function pageRename(oldName: string, newName: string, callback: () => void) {
-//   blockRepo.renamePage(oldName, newName)
-//   callback()
 // }
 
 /**
@@ -565,14 +558,36 @@ export async function docOpen(title: string) {
 /**
  * Save doc on remote
  */
-export async function docSave(doc: Doc) {}
+export async function docSave(doc: Doc) {
+  // draftService.saveDraft()
+  const removeOp = ops.docRemoveOp(doc)
+}
 
 /**
  * Remove doc from local and remote if possible
  */
 export async function docRemove(doc: Doc) {
   if (doc.noteDraftCopy) {
-    // update remote
+    const resp = await draftService.removeDraft(doc.noteDraftCopy.id)
+  }
+  const { blockReducers, docReducers } = ops.docRemoveOp(doc)
+
+  blockRepo.update(blockReducers)
+  docRepo.update(docReducers)
+}
+
+/**
+ * If note not existed, rename directly
+ * If note existed, update note-meta without rename
+ */
+export async function docRename(doc: Doc, newTitle: string) {
+  if (doc.noteCopy) {
+    // do nothing
+  } else {
+    const { blockReducers, docReducers } = ops.docRenameOp(doc, newTitle)
+
+    blockRepo.update(blockReducers)
+    docRepo.update(docReducers)
   }
 }
 

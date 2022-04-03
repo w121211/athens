@@ -1,5 +1,5 @@
 import { createStore, select, setProp, withProps } from '@ngneat/elf'
-import { map, switchMap, tap } from 'rxjs'
+import { filter, switchMap, tap } from 'rxjs'
 import { EditorProps } from '../interfaces'
 import { docRepo } from './doc.repository'
 
@@ -27,7 +27,14 @@ class EditorRepository {
   mainDoc$ = editorStore.pipe(
     select((state) => state.route.symbolMain),
     switchMap((symbol) => docRepo.getDoc$(symbol)),
-    tap(console.debug),
+    // tap(console.debug),
+  )
+
+  modalDoc$ = editorStore.pipe(
+    select((state) => state.route.symbolModal),
+    filter((e): e is string => e !== undefined),
+    switchMap((symbol) => docRepo.getDoc$(symbol)),
+    // tap(console.debug),
   )
 
   getValue() {

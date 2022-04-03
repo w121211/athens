@@ -16,7 +16,8 @@ type EditorElProps = {
 }
 
 export const EditorEl = ({ route }: EditorElProps): JSX.Element | null => {
-  const [mainDoc] = useObservable(editorRepo.mainDoc$)
+  const [mainDoc] = useObservable(editorRepo.mainDoc$),
+    [modalDoc] = useObservable(editorRepo.modalDoc$)
 
   useEffect(() => {
     console.log(route)
@@ -27,7 +28,10 @@ export const EditorEl = ({ route }: EditorElProps): JSX.Element | null => {
     return null // wait until doc is loaded
   }
 
-  return <DocEl doc={mainDoc} />
-
-  // return <>{mainDoc ? <DocEl doc={mainDoc} /> : <DocEl doc={mainDoc} />}</>
+  return (
+    <>
+      <DocEl doc={mainDoc} />
+      {modalDoc && <DocEl doc={modalDoc} />}
+    </>
+  )
 }

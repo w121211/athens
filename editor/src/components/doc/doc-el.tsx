@@ -28,6 +28,7 @@ import { blockRepo, getBlock } from '../../stores/block.repository'
 import { Doc } from '../../interfaces'
 import { MouseEvent } from 'react'
 import { useObservable } from '@ngneat/react-rxjs'
+import { docRemove, docSave } from '../../events'
 
 const PageWrap = styled.article`
   padding: 1rem;
@@ -267,6 +268,22 @@ export const DocEl = ({
       ) : (
         <DocPlaceholder />
       )} */}
+
+      <button
+        onClick={() => {
+          docSave(doc)
+        }}
+      >
+        Save
+      </button>
+
+      <button
+        onClick={() => {
+          docRemove(doc)
+        }}
+      >
+        Remove
+      </button>
 
       {children ? (
         children

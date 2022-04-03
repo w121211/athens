@@ -8,12 +8,14 @@ import {
   addEntities,
   deleteEntities,
   updateEntities,
+  updateEntitiesIds,
 } from '@ngneat/elf-entities'
 import assert from 'assert'
 import {
   Block,
   BlockPosition,
   BlockPositionRelation,
+  Doc,
   Note,
   NoteDraft,
 } from '../interfaces'
@@ -25,7 +27,7 @@ import {
   getBlock,
   getBlockChildren,
 } from '../stores/block.repository'
-import { DocReducer, getDoc } from '../stores/doc.repository'
+import { DocReducer, docRepo, getDoc } from '../stores/doc.repository'
 import { genBlockUid } from '../utils'
 import {
   getRefBlockOfPosition,
@@ -493,7 +495,7 @@ export function blockSplitChainOp(
 // }
 
 /**
- *
+ * Create a doc from note-draft, will also add blocks
  */
 export function docLoadOp(
   title: string,
@@ -503,6 +505,8 @@ export function docLoadOp(
   blockReducers: BlockReducer[]
   docReducers: DocReducer[]
 } {
+  if (docRepo.findDoc(title) !== undefined) throw new Error('Doc is existed')
+
   const { content } = noteDraft
   const docBlock = content.find((e) => e.docTitle === title)
 
@@ -517,15 +521,17 @@ export function docLoadOp(
       addEntities({
         title,
         blockUid: docBlock.uid,
-        note,
-        noteDraft,
+        noteCopy: note ?? undefined,
+        noteDraftCopy: noteDraft,
       }),
     ],
   }
 }
 
 /**
- *
+ * Create a new doc
+ * - if note is given, use note-doc as start
+ * - if note is null, a blank doc is created
  */
 export function docNewOp(
   title: string,
@@ -534,6 +540,8 @@ export function docNewOp(
   blockReducers: BlockReducer[]
   docReducers: DocReducer[]
 } {
+  if (docRepo.findDoc(title) !== undefined) throw new Error('Doc is existed')
+
   if (note) {
     const { doc: noteDoc } = note,
       docBlock = noteDoc.content.find((e) => e.docTitle === title)
@@ -574,23 +582,46 @@ export function docNewOp(
 }
 
 /**
- *
+ * Rename doc title and its doc-block, only when note is not existed
+ * If note is existed, a rename request stored in note-meta
  */
-export function docRenameOp() {
-  //
+export function docRenameOp(
+  doc: Doc,
+  newTitle: string,
+): {
+  blockReducers: BlockReducer[]
+  docReducers: DocReducer[]
+} {
+  if (doc.noteCopy) throw new Error('[docRenameOp] doc got note-copy')
+
+  const _ = getBlock(doc.blockUid),
+    blockReducers: BlockReducer[] = [
+      updateEntities(doc.blockUid, { docTitle: newTitle, str: newTitle }),
+    ],
+    docReducers = [updateEntitiesIds(doc.title, newTitle)]
+
+  return { blockReducers, docReducers }
+}
+
+/**
+ * Also remove all blocks of doc
+ */
+export function docRemoveOp(doc: Doc): {
+  blockReducers: BlockReducer[]
+  docReducers: DocReducer[]
+} {
+  const docBlock = getBlock(doc.blockUid),
+    blockReducers = blockRemoveOp(docBlock),
+    docReducers = [deleteEntities(doc.title)]
+
+  return { blockReducers, docReducers }
 }
 
 /**
  *
  */
-export function docRemoveOp(title: string): DocReducer[] {
-  // const pageUid = getPageUid(title)
-  // if (pageUid) {
-  //   const retractBlocks = retractUidRecursively(pageUid)
-  //   // deleteLinkedRefs = null,
-  //   return [retractBlocks]
-  // }
-  // return []
+export function docSaveOp(doc: Doc, draft: NoteDraft): DocReducer[] {
+  return [updateEntities(doc.title, { noteDraftCopy: draft })]
 }
 
 //
