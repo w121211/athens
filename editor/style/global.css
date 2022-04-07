@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+
+@layer components {
+  .block-container {
+    @apply relative
+        flex flex-col content-start flex-1 basis-full 
+        rounded-sm
+        text-inherit leading-7
+
+        after:content-['']
+        after:absolute
+        after:inset-y-[.75px]
+        after:inset-x-0
+        after:opacity-0
+        after:pointer-events-none
+        after:rounded
+        after:transition-opacity after:duration-75
+        after:bg-[#0075E1]/10;
+  }
+  .block-container .block-container {
+    @apply ml-[2em]
+        [grid-area:body];
+  }
+  .block-container.is-selected:after {
+    @apply opacity-100;
+  }
+  .is-selected .block-container.is-selected:after {
+    @apply opacity-0;
+  }
+  .block-container.show-tree-indicator {
+    @apply before:content-[''] 
+           before:absolute
+           before:w-[1px] 
+           before:left-[calc(1.375em_+_1px)]
+           before:top-[2em]
+           before:bottom-0
+           before:translate-x-1/2
+           before:transition-[background-color] before:duration-200 before:ease-in-out
+           before:border-[hsla(32,81%,10%,0.08)];
+  }
+}

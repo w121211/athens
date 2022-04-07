@@ -3,6 +3,7 @@ module.exports = {
     browser: true,
     es6: true,
     jest: true,
+    node: true, //able to use postcss.config.js & tailwind.config.js
   },
   extends: [
     'eslint:recommended',
