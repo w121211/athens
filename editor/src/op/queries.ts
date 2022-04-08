@@ -49,8 +49,8 @@ export function nextBlock(block: Block, selection?: true): Block | null {
     return nextSibling
   }
 
-  const { open, pageTitle, childrenUids } = block
-  if ((open || pageTitle) && childrenUids.length > 0) {
+  const { open, docTitle, childrenUids } = block
+  if ((open || docTitle) && childrenUids.length > 0) {
     return getBlock(childrenUids[0])
   }
   return nextSibling
@@ -66,7 +66,7 @@ function nextSiblingRecusively(block: Block): Block | null {
 
   if (sib) {
     return sib
-  } else if ((parent && parent.pageTitle) || block.pageTitle) {
+  } else if ((parent && parent.docTitle) || block.docTitle) {
     return null
   } else if (parent) {
     return nextSiblingRecusively(parent)

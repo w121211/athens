@@ -23,6 +23,33 @@ import { editorRepo } from './stores/editor.repository'
 import { noteService } from './services/note.service'
 
 //
+// History Events
+//
+//
+//
+//
+//
+//
+
+export function historyClear() {
+  blockRepo.clearHistory()
+}
+
+/**
+ * Undo
+ */
+export function historyUndo() {
+  // const doNothing = rfdbRepo.getValue().editing.uid !== null
+  // const editingUid = rfdbRepo.getValue().editing.uid,
+  //   block = editingUid ? getBlock(editingUid) : null
+  blockRepo.undo()
+}
+
+export function historyRedo() {
+  blockRepo.redo()
+}
+
+//
 // Key-down Events
 //
 //
@@ -146,11 +173,11 @@ function blockSaveBlockMoveCompositeOp(
   sourceBlock: Block,
   refUid: string,
   relation: BlockPositionRelation,
-  str: string,
+  localStr: string,
 ): [BlockReducer[], BlockReducer[]] {
   const location = compatPosition({ refBlockUid: refUid, relation })
   return [
-    ops.blockSaveOp(sourceBlock.uid, str),
+    ops.blockSaveOp(sourceBlock.uid, localStr),
     ops.blockMoveOp(sourceBlock, location),
   ]
 }
@@ -313,8 +340,13 @@ export function blockOpen(uid: string, open: boolean) {
 }
 
 export function blockSave(uid: string, str: string) {
+  console.debug('save', str)
+
   const block = getBlock(uid),
     doNothing = block.str === str
+
+  console.log(block.str, str)
+  console.log(block.str === str)
 
   if (block.docTitle) {
     throw new Error('[blockSave] doc-block not allow to change string')
@@ -442,17 +474,6 @@ export function mouseDownUnset() {
 }
 
 //
-// Search Events
-//
-//
-//
-//
-//
-//
-
-export function search(uids: string[]) {}
-
-//
 // Selction Events
 //
 //
@@ -460,10 +481,6 @@ export function search(uids: string[]) {}
 //
 //
 //
-
-export function selectionSetItems(uids: string[]) {
-  rfdbRepo.updateSelectionItems(uids)
-}
 
 export function selectionAddItem(
   uid: string,
@@ -495,6 +512,10 @@ export function selectionAddItem(
   }
 }
 
+export function selectionClear() {
+  rfdbRepo.updateSelectionItems([])
+}
+
 export function selectionDelete() {
   const selectedUids = rfdbRepo.getValue().selection.items,
     chain = ops.blockRemoveManyChainOp(selectedUids)
@@ -504,8 +525,57 @@ export function selectionDelete() {
   editingUid(null)
 }
 
-export function selectionClear() {
-  rfdbRepo.updateSelectionItems([])
+export function selectionSetItems(uids: string[]) {
+  rfdbRepo.updateSelectionItems(uids)
+}
+
+function selectUp(selectedItems: string[]): string[] {
+  if (selectedItems.length === 0) {
+    throw new Error('[selectUp] selectedItems.length === 0')
+  }
+
+  const firstItem = selectedItems[0],
+    block = getBlock(firstItem),
+    parent = block.parentUid && getBlock(block.parentUid),
+    prev = parent && prevBlock(block, parent),
+    editingUid = rfdbRepo.getValue().editing.uid,
+    editingIdx = selectedItems.findIndex((e) => e === editingUid),
+    n = selectedItems.length
+
+  let newItems: string[] = []
+  // ;; if prev-block is root node TODO: (OR context root), don't do anything
+  if (editingIdx === 0 && n > 1 && selectedItems.pop()) {
+    // do nothing
+  } else if (prev && prev.docTitle) {
+    newItems = selectedItems
+    // ;; if prev block is parent, replace editing/uid and first item w parent; remove children
+  } else if (parent && prev && parent.uid === prev.uid) {
+    const parentChildren = parent.childrenUids,
+      toKeep = selectedItems.filter((e) => !parentChildren.includes(e)),
+      newItems = [prev.uid, ...toKeep]
+  } else if (prev) {
+    newItems = [prev.uid, ...selectedItems]
+  }
+
+  return newItems
+}
+
+export function selectedUp(selectedItems: string[]) {
+  rfdbRepo.updateSelectionItems(selectUp(selectedItems))
+}
+
+export function selectedDown(selectedItems: string[]) {
+  if (selectedItems.length === 0) {
+    throw new Error('[selectUp] selectedItems.length === 0')
+  }
+
+  const lastItem = selectedItems[selectedItems.length - 1],
+    block = getBlock(lastItem),
+    next = nextBlock(block, true)
+
+  if (next) {
+    rfdbRepo.updateSelectionItems([...selectedItems, next.uid])
+  }
 }
 
 //
@@ -559,7 +629,7 @@ export async function docOpen(title: string) {
  * Save doc on remote
  */
 export async function docSave(doc: Doc) {
-  // draftService.saveDraft()
+  draftService.saveDraft()
   const removeOp = ops.docRemoveOp(doc)
 }
 

@@ -25,6 +25,7 @@ import { BlockContent } from './block-content'
 import { DropAreaIndicator } from './drop-area-indicator'
 import { Toggle } from './toggle'
 import { throttle } from 'lodash'
+import { useEffect } from 'react'
 
 // export const BlockContainer = ({
 //   uid,
@@ -167,9 +168,9 @@ export const BlockEl = ({
     [isSelected] = useObservable(rfdbRepo.getIsSelected$(uid)),
     [search, setSearch] = useState<Search>({
       type: null,
-      query: null,
-      index: null,
-      results: [],
+      term: null,
+      hitIndex: null,
+      hits: [],
     }),
     [caret, setCaret] = useState<CaretPosition>({ top: 0, left: 0, height: 0 }),
     [contextMenu, setContextMenu] = useState({ x: null, y: null, show: false }),
@@ -182,12 +183,16 @@ export const BlockEl = ({
   //   const [avatarAnchorEl, setAvatarAnchorEl] =
   //     React.useState<HTMLDivElement | null>(null)
 
+  useEffect(() => {
+    console.log('isEditing ' + uid, isEditing)
+  }, [isEditing])
+
   if (block === undefined) {
     console.debug('<Block> block === undefined', uid)
     return null
   }
 
-  const { open, str: localStr } = block,
+  const { open, str: defaultLocalStr } = block,
     isOpen = open ?? true,
     childrenBlockEls = useMemo(() => {
       return children.map((e) => (
@@ -262,7 +267,7 @@ export const BlockEl = ({
           {...{
             uid,
             isEditing,
-            localStr,
+            defaultLocalStr,
             showEditableDom,
             caret,
             setCaret,
@@ -271,10 +276,13 @@ export const BlockEl = ({
             setLastKeyDown,
           }}
         />
+
         {/* {refsCount >= 1 && <Refs refsCount={refsCount} />} */}
       </BlockBody>
 
-      <InlineSearchEl {...{ block, caret, search, setSearch }} />
+      {/* TODO: Why not search.type && InlineSearchEl ??? */}
+      <InlineSearchEl {...{ blockUid: block.uid, caret, search, setSearch }} />
+
       {/* <SlashMenuEl props={{ block, state }} /> */}
 
       {isOpen && children.length > 0 && childrenBlockEls}

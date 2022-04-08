@@ -1,46 +1,15 @@
-import { MouseEvent } from 'react'
-import { KeyboardEvent } from 'react'
-import { rfdbStore } from './stores/rfdb.repository'
-import { destructKeyDown, shortcutKey } from './utils'
+import * as events from './events'
+import { rfdbRepo, rfdbStore } from './stores/rfdb.repository'
+import { destructKeyDown, isShortcutKey } from './utils'
 
-function multiBlockSelection(event: globalThis.KeyboardEvent) {
-  const selectedItems = subscribe('select-subs/items')
-  if (!empty(selectedItems)) {
-    const shift = event.shiftKey,
-      keyCode = event.keyCode,
-      enter = keyCode === 'KeyCodes.ENTER',
-      bksp = keyCode === 'KeyCodes.BACKSPACE',
-      up = keyCode === 'KeyCodes.UP',
-      down = keyCode === 'KeyCodes.DOWN',
-      tab = keyCode === 'KeyCodes.TAB',
-      deleteKey = keyCode === 'KeyCodes.DELETE'
-
-    if (enter) {
-      dispatch('editing/uid', selectedItems[0])
-      dispatch('select-events/clear')
-    } else if (bksp || deleteKey) {
-      dispatch('select-events/delete')
-      dispatch('select-events/clear')
-    } else if (tab) {
-      e.preventDefault()
-      if (shift) {
-        dispatch('unindent/multi', { uids: selectedItems })
-        dispatch('indent/multi', { uids: selectedItems })
-      }
-    } else if (shift && up) {
-      dispatch('selected/up', selectedItems)
-    } else if (shift && down) {
-      dispatch('selected/down', selectedItems)
-    } else if (up || down) {
-      e.preventDefault()
-      dispatch('select-events/clear', selectedItems)
-      if (up) {
-        dispatch('up', selectedItems[0], e)
-        dispatch('down', selectedItems[selectedItems.length - 1], e)
-      }
-    }
-  }
-}
+//
+// Mouse events
+//
+//
+//
+//
+//
+//
 
 function unfocus(event: globalThis.MouseEvent) {
   // const selectedItems = empty(subscribe('select-subs/items')),
@@ -66,74 +35,110 @@ function unfocus(event: globalThis.MouseEvent) {
   }
 }
 
-// Hotkeys
+//
+// Keyboard events
+//
+//
+//
+//
+//
+//
 
-function keyDown(event: globalThis.KeyboardEvent) {
-  const dKeyDown = destructKeyDown(event as unknown as KeyboardEvent),
-    { keyCode, ctrl, meta, shift, alt } = dKeyDown
+/**
+ * "When blocks are selected, handle various keypresses:
+  - shift+up/down: increase/decrease selection.
+  - enter: deselect and begin editing textarea
+  - backspace: delete all blocks
+  - up/down: change editing textarea
+  - tab: indent/unindent blocks
+  Can't use textarea-key-down from keybindings.cljs because textarea is no longer focused."
+ */
+export function multiBlockSelection(e: KeyboardEvent) {
+  const selectedItems = rfdbRepo.getValue().selection.items
+
+  if (selectedItems.length > 0) {
+    const { shift, key } = destructKeyDown(e),
+      enter = key === 'Enter',
+      bksp = key === 'Backspace',
+      up = key === 'ArrowUp',
+      down = key === 'ArrowDown',
+      tab = key === 'Tab',
+      dlt = key === 'Delete'
+
+    if (enter) {
+      events.editingUid(selectedItems[0])
+      events.selectionClear()
+    } else if (bksp || dlt) {
+      events.selectionDelete()
+      events.selectionClear()
+    } else if (tab) {
+      e.preventDefault()
+
+      if (shift) {
+        events.unindentMulti(selectedItems)
+      } else {
+        events.indentMulti(selectedItems)
+      }
+    } else if (shift && up) {
+      events.selectedUp(selectedItems)
+    } else if (shift && down) {
+      events.selectedDown(selectedItems)
+    } else if (up || down) {
+      e.preventDefault()
+      events.selectionClear()
+
+      if (up) {
+        events.up(selectedItems[0], 'end')
+      } else {
+        events.down(selectedItems[selectedItems.length - 1], 'end')
+      }
+    }
+  }
+}
+
+/**
+ * @athens key-down!
+ *
+ * If redo, use browser's native undo/redo first
+ */
+// export function editorKeyDown(event: globalThis.KeyboardEvent) {
+export function hotkey(event: KeyboardEvent) {
+  const dKeyDown = destructKeyDown(event),
+    { key, ctrl, meta, shift, alt } = dKeyDown
+  // editingUid = rfdbRepo
   // editingUid = subscribe('editing/uid')
 
-  // if (navigateKey(destructKeys)) {
-  //   switch (keyCode) {
-  //     case 'KeyCodes.LEFT':
-  //       if (editingUid === null) {
-  //         window.history.back()
-  //       }
-  //       break
-  //     case 'KeyCodes.RIGHT':
-  //       if (editingUid === null) {
-  //         window.history.forward()
-  //       }
-  //       break
-  //   }
-  // } else
-  if (shortcutKey(meta, ctrl)) {
-    switch (keyCode) {
-      case 'KeyCodes.S':
-        dispatch.save()
+  if (isShortcutKey(meta, ctrl)) {
+    switch (key) {
+      case 's':
+        // save
         break
-      case 'KeyCodes.EQUALS':
-        // zoom in
+      case 'k':
+        // open search-all panel
         break
-      case 'KeyCodes.DASH':
-        // zoom out
-        break
-      case 'KeyCodes.ZERO':
-        // zoom reset
-        break
-      case 'KeyCodes.K':
-        // toggle
-        break
-      case 'KeyCodes.G':
-        break
-      case 'KeyCodes.Z':
-        break
-      case 'KeyCodes.BACKSLASH':
-        break
-      case 'KeyCodes.COMMA':
-        break
-      case 'KeyCodes.T':
-        break
-    }
-  } else if (alt) {
-    switch (keyCode) {
-      case 'KeyCodes.D':
-        break
-      case 'KeyCodes.G':
-        break
-      case 'KeyCodes.A':
-        break
-      case 'KeyCodes.T':
+      case 'z':
+        // reado/undo
+        if (shift) {
+          events.historyRedo()
+        } else {
+          console.debug('editor undo()')
+          events.historyUndo()
+        }
         break
     }
   }
 }
 
+//
 // Clipboard
+//
+//
+//
+//
+//
+//
 
 const unformatDoubleBrackets = () => {}
-
-const blockRefsToPlainText = (s) => {}
 
 const blocksToClipboardData = (depth, node, unformat = false) => {
   const { string: _string, children, _header } = node.block,
@@ -177,7 +182,7 @@ const cut = (js, e) => {
   }
 }
 
-const forceLeave = atom(false)
+// const forceLeave = atom(false)
 
 const preventSave = () => {
   window.addEventListener('beforeunload', (e) => {
@@ -202,10 +207,10 @@ const preventSave = () => {
   })
 }
 
-function init() {
-  document.addEventListener('mousedown', unfocus)
-  window.addEventListener('keydown', multiBlockSelection)
-  window.addEventListener('keydown', keyDown)
-  window.addEventListener('copy', copy)
-  window.addEventListener('cut', cut)
-}
+// function init() {
+//   document.addEventListener('mousedown', unfocus)
+//   window.addEventListener('keydown', multiBlockSelection)
+//   window.addEventListener('keydown', keyDown)
+//   window.addEventListener('copy', copy)
+//   window.addEventListener('cut', cut)
+// }

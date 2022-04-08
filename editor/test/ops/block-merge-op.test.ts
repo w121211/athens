@@ -150,7 +150,7 @@ describe('blockMergeOp()', () => {
   it('merge with parent', () => {
     const remove = getBlock('d5'),
       merge = getBlock('c3')
-    blockRepo.updateInChain(blockMergeChainOp(remove, merge, remove.str))
+    blockRepo.updateChain(blockMergeChainOp(remove, merge, remove.str))
     expect(() =>
       validateChildrenUids(blocksStore.getValue().entities),
     ).not.toThrow()
