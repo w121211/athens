@@ -204,19 +204,21 @@ export const BlockEl = ({
     <BlockContainer
       data-uid={uid}
       data-childrenuids={children.map((e) => e.uid).join(',')}
-      className={[
-        'block-container',
-        children.length > 0 && isOpen && 'show-tree-indicator',
-        isOpen ? 'is-open' : 'is-closed',
-        // linkedRef && 'is-linked-ref',
+      className={
+        // [
+        `block-container
+        ${children.length > 0 && isOpen && 'show-tree-indicator'}
+           ${isOpen ? 'is-open' : 'is-closed'}
+           ${isSelected ? 'is-selected' : ''}
+           ${isSelected && dragging && 'is-dragging'}
+           ${isEditing && 'is-editing'}`
+        // ]
         // isLocked && 'is-locked',
-        isSelected && 'is-selected',
+        // linkedRef && 'is-linked-ref',
         // presentUser && showPresentUser && 'is-presence',
-        isSelected && dragging && 'is-dragging',
-        isEditing && 'is-editing',
-      ]
-        .filter(Boolean)
-        .join(' ')}
+        //   .filter(Boolean)
+        //   .join(' ')
+      }
       //   onDragOver={handleDragOver}
       //   onDragLeave={handleDragLeave}
       //   onDrop={handleDrop}

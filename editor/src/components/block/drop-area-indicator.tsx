@@ -57,9 +57,26 @@ export const DropAreaIndicator = ({
 }) => {
   // const mergedStyle =
   return (
-    <DropAreaIndicatorWrap
+    <div
+      className={`
+      block 
+      relative 
+      h-[1px] w-full 
+      pointer-events-none 
+      -mb-[1px] 
+      opacity-75 
+      text-[#0075E1] 
+      origin-left z-[3] 
+      after:absolute 
+      after:content-[''] 
+      after:inset-y-[-0.5px] after:right-0 after:left-[calc(2em_-_4px)] 
+      after:rounded-full 
+      after:bg-current  
+    ${
+      child &&
+      'w-[calc(100%_-_1.95rem)] ml-[1.95rem] before:absolute before:content-[""] before:rounded-[10rem] before:border-2 before:w-1 before:h-1 before:left-[1.95rem] before:top-1/2 before:-translate-y-1/2 before:-translate-x-[calc(-100%_-_2px)] after:rounded-l-none'
+    }`}
       style={style}
-      className={child && 'child'}
-    ></DropAreaIndicatorWrap>
+    ></div>
   )
 }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { ReactNode, useEffect } from 'react'
 import styled from 'styled-components'
 import { MoreHoriz } from '@material-ui/icons'
 import PopperUnstyled from '@mui/base/PopperUnstyled'
@@ -24,15 +24,29 @@ import { useObservable } from '@ngneat/react-rxjs'
 import { docRemove, docSave, historyClear, historyUndo } from '../../events'
 import { hotkey, multiBlockSelection } from '../../listeners'
 
-const PageWrap = styled.article`
-  padding: 1rem;
-  flex-basis: 100%;
-  align-self: stretch;
-  width: 100%;
-  max-width: 60em;
-  margin-left: auto;
-  margin-right: auto;
-`
+// const PageWrap = styled.article`
+//   padding: 1rem;
+//   flex-basis: 100%;
+//   align-self: stretch;
+//   width: 100%;
+//   max-width: 60em;
+//   margin-left: auto;
+//   margin-right: auto;
+// `
+const PageWrap = ({ children }: { children: ReactNode }) => {
+  return (
+    <article
+      className="
+    basis-full 
+    self-stretch 
+    w-full max-w-[60em] 
+    mx-auto 
+    p-4"
+    >
+      {children}
+    </article>
+  )
+}
 
 const PageHeader = styled.header`
   position: relative;
@@ -92,16 +106,39 @@ const Title = styled.h1`
   }
 `
 
-const PageMenuToggle = styled.button`
-  float: left;
-  border-radius: 1000px;
-  margin-left: -2.5rem;
-  margin-top: 0.5rem;
-  width: 2rem;
-  height: 2rem;
-  color: var(--body-text-color---opacity-high);
-  vertical-align: bottom;
-`
+// const PageMenuToggle = styled.button`
+//   float: left;
+//   border-radius: 1000px;
+//   margin-left: -2.5rem;
+//   margin-top: 0.5rem;
+//   width: 2rem;
+//   height: 2rem;
+//   color: var(--body-text-color---opacity-high);
+//   vertical-align: bottom;
+// `
+
+const PageMenuToggle = ({
+  onClick,
+  children,
+}: {
+  onClick: (e: MouseEvent<HTMLButtonElement>) => void
+  children: ReactNode
+}) => {
+  return (
+    <button
+      className="
+      float-left 
+      w-8 h-8 
+      rounded-full 
+      -ml-10 mt-2 
+      align-bottom 
+      text-[#AAA]/75"
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  )
+}
 
 const BlocksContainer = styled(BlockListContainer)`
   padding-left: 1rem;

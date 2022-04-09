@@ -1,4 +1,14 @@
 import styled from 'styled-components'
+import React from 'react'
+import {
+  blockDragLeave,
+  blockDragOver,
+  blockDrop,
+} from '../../handlers/drag-handlers'
+import { ReactNode } from 'react'
+import { useObservable } from '@ngneat/react-rxjs'
+import { blockRepo } from '../../stores/block.repository'
+import { Block, DragTarget } from '../../interfaces'
 
 // const BlockRefsCountEl = (count, clickFn) => {
 //   return (
@@ -12,6 +22,40 @@ import styled from 'styled-components'
 //     </div>
 //   )
 // }
+
+interface BlockContainerProps {
+  uid: string
+  childrenuids: string
+  children: ReactNode
+  block: Block
+  dragTarget: DragTarget | null
+  setDragTarget: () => void
+  className: string
+}
+
+const myBlockContainer = ({
+  className,
+  children,
+  childrenuids,
+  uid,
+  block,
+  dragTarget,
+  setDragTarget,
+}: BlockContainerProps) => {
+  return (
+    <div
+      data-uid={uid}
+      data-chihldrenuids={childrenuids}
+      className={`relative flex flex-col flex-1 justify-start leading-7 rounded-sm text-inherit 
+    after:content-[''] after:absolute after:top-[0.75px] after:right-0 after:bottom-[0.75px] after:left-0 after:opacity-0 after:pointer-events-none after:rounded-sm ${className}`}
+      onDragOver={(e) => blockDragOver(e, block, setDragTarget)} // TODO: throttle
+      onDragLeave={(e) => blockDragLeave(e, block, setDragTarget)}
+      onDrop={(e) => blockDrop(e, block, dragTarget, setDragTarget)}
+    >
+      {children}
+    </div>
+  )
+}
 
 export const BlockContainer = styled.div`
   display: flex;

@@ -23,7 +23,8 @@
     //   "@/*": ["./*"]
     // }
   },
-  "include": ["src/**/*.tsx", "test/**/*.ts"],
+  "include": ["src/**/*.tsx", "test/**/*.ts", "**/*.js"],
+
   "ts-node": {
     "transpileOnly": true,
     // these options are overrides used only by ts-node

@@ -113,12 +113,17 @@ const anchorElements = {
   ),
 }
 
-const FocusRing = styled.div`
-  position: absolute;
-  inset: 0.25rem -0.125rem;
-  border: 2px solid var(--link-color);
-  border-radius: 0.25rem;
-`
+// const FocusRing = styled.div`
+//   position: absolute;
+//   inset: 0.25rem -0.125rem;
+//   border: 2px solid var(--link-color);
+//   border-radius: 0.25rem;
+// `
+const FocusRing = () => {
+  return (
+    <div className="absolute inset-y-1 inset-x-[-0.125rem] border-2 border-[#0075E1] rounded"></div>
+  )
+}
 
 export interface AnchorProps extends TooltipTriggerProps {
   /**
@@ -171,7 +176,7 @@ export const Anchor = (props: AnchorProps) => {
       >
         firefox drag-drop works here
       </button> */}
-      <AnchorButton
+      <button
         className={['anchor', isClosedWithChildren && 'closed-with-children']
           .filter(Boolean)
           .join(' ')}
@@ -181,7 +186,7 @@ export const Anchor = (props: AnchorProps) => {
       >
         {anchorElements[anchorElement] ?? anchorElements['circle']}
         {isFocusVisible && <FocusRing />}
-      </AnchorButton>
+      </button>
       {/* {shouldShowDebugDetails && state.isOpen && (
         <DetailPopover block={block} {...tooltipProps} state={state} />
       )} */}
