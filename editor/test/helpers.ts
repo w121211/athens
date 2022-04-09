@@ -22,7 +22,7 @@ export const blocks: Block[] = [
     order: 0,
     parentUid: null,
     childrenUids: ['b1', 'b2'],
-    pageTitle: 'page-0',
+    docTitle: 'page-0',
     open: true,
   },
   {

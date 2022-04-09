@@ -8,11 +8,14 @@ import {
 import { textareaKeyDown } from '../../handlers/textarea-keydown'
 import styled from 'styled-components'
 import {
+  textareaBlur,
   textareaChange,
   textareaClick,
   textareaMouseDown,
   textareaMouseEnter,
+  textareaUnmount,
 } from '../../handlers/textarea-handlers'
+import { useEffect } from 'react'
 
 const ContentWrap = styled.div`
   grid-area: content;
@@ -305,7 +308,7 @@ export const BlockContent = ({
   // textareaProps,
   uid,
   isEditing,
-  localStr,
+  defaultLocalStr,
   showEditableDom,
   caret,
   setCaret,
@@ -315,7 +318,7 @@ export const BlockContent = ({
 }: {
   uid: string
   isEditing: boolean
-  localStr: string
+  defaultLocalStr: string
   showEditableDom: boolean
   caret: CaretPosition
   setCaret: React.Dispatch<React.SetStateAction<CaretPosition>>
@@ -324,51 +327,64 @@ export const BlockContent = ({
   setLastKeyDown: React.Dispatch<
     React.SetStateAction<DestructTextareaKeyEvent | null>
   >
-}): JSX.Element => (
-  <ContentWrap
-    // className="block-content"
-    className={[
-      // isLocked ? 'is-locked' : '',
-      isEditing ? 'is-editing' : '',
-      showEditableDom ? 'show-editable-dom' : '',
-    ].join(' ')}
-  >
-    {(isEditing || showEditableDom) && (
-      <textarea
-        // rows={1}
-        // placeholder="Enter text"
-        // {...textareaProps}
-        // onKeyUp={handleContentChange}
-        // defaultValue={rawContent}
-        //
-        id={'editable-uid-' + uid}
-        data-testid="block-content-textarea"
-        // className={['textarea', empty(selectedItems) && editing ? 'is-editing' : undefined].join('')}
-        // style={{ lineHeight: '1.40em' }}
-        rows={1}
-        value={localStr}
-        onChange={(e) => textareaChange(e, uid)}
-        // onPaste={(e) => textareaPaste(e, uid, state)}
-        onKeyDown={(event) =>
-          textareaKeyDown({
-            event,
-            uid,
-            editing: isEditing,
-            localStr,
-            caret,
-            setCaret,
-            search,
-            setSearch,
-            setLastKeyDown,
-          })
-        }
-        // onBlur={state.str.saveFn}
-        onClick={(e) => textareaClick(e, uid)}
-        onMouseDown={(e) => textareaMouseDown(e)}
-        onMouseEnter={(e) => textareaMouseEnter(e, uid)}
-      />
-    )}
-    <div className="rendered-content">{localStr}</div>
-    {/* {parseAndRender(state.string.local, originalUid || uid)} */}
-  </ContentWrap>
-)
+}): JSX.Element => {
+  const [localStr, setLocalStr] = useState(defaultLocalStr)
+
+  useEffect(() => {
+    if (localStr !== defaultLocalStr) {
+      console.debug('textareaUnmount')
+      textareaUnmount(uid, localStr)
+    }
+  }, [isEditing, showEditableDom])
+
+  return (
+    <ContentWrap
+      className={[
+        'block-content',
+        // isLocked ? 'is-locked' : '',
+        isEditing ? 'is-editing' : '',
+        showEditableDom ? 'show-editable-dom' : '',
+      ].join(' ')}
+    >
+      {(isEditing || showEditableDom) && (
+        <textarea
+          // rows={1}
+          // placeholder="Enter text"
+          // {...textareaProps}
+          // onKeyUp={handleContentChange}
+          // defaultValue={rawContent}
+          //
+          id={'editable-uid-' + uid}
+          data-testid="block-content-textarea"
+          // className={['textarea', empty(selectedItems) && editing ? 'is-editing' : undefined].join('')}
+          // style={{ lineHeight: '1.40em' }}
+          rows={1}
+          value={localStr}
+          onChange={(e) => textareaChange(e, uid, setLocalStr)}
+          // onPaste={(e) => textareaPaste(e, uid, state)}
+          onKeyDown={(e) =>
+            textareaKeyDown({
+              e,
+              uid,
+              editing: isEditing,
+              localStr,
+              caret,
+              setCaret,
+              search,
+              setSearch,
+              setLastKeyDown,
+            })
+          }
+          onBlur={(e) => textareaBlur(e, uid)}
+          onClick={(e) => textareaClick(e, uid)}
+          onMouseDown={(e) => textareaMouseDown(e)}
+          onMouseEnter={(e) => textareaMouseEnter(e, uid)}
+        />
+      )}
+      <div className="rendered-content" style={{ color: 'red' }}>
+        {localStr}
+      </div>
+      {/* {parseAndRender(state.string.local, originalUid || uid)} */}
+    </ContentWrap>
+  )
+}

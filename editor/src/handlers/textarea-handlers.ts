@@ -1,13 +1,29 @@
-import { KeyboardEvent } from 'react'
-import { throttle } from 'rxjs'
+import { difference, intersection, union } from 'lodash'
 import * as events from '../events'
-import { blockRepo, getBlock } from '../stores/block.repository'
-import { nextBlock } from '../op/queries'
 import { rfdbRepo } from '../stores/rfdb.repository'
-import { getDatasetChildrenUid, getDatasetUid, shortcutKey } from '../utils'
-import { CaretPosition, DestructTextareaKeyEvent, Search } from '../interfaces'
-import { getCaretCoordinates } from './textarea-caret'
-import { MouseEvent } from 'react'
+import { getDatasetChildrenUid, getDatasetUid } from '../utils'
+
+function getDescendantsUids(
+  candidateUids: string[],
+  uids_childrenUids: Record<string, string[] | null>,
+) {
+  let descendants: string[] = []
+  const stack = candidateUids
+
+  while (stack.length > 0) {
+    const uid = stack.shift()
+    if (uid === undefined) break
+
+    // childrenUids can be undefined if not found
+    const childrenUids = uids_childrenUids[uid]
+    if (childrenUids) {
+      descendants = descendants.concat(childrenUids)
+      childrenUids.forEach((e) => stack.push(e))
+    }
+  }
+
+  return descendants
+}
 
 /**
  * "Used by both shift-click and click-drag for multi-block-selection.
@@ -26,42 +42,50 @@ import { MouseEvent } from 'react'
   Because of this bug, add additional exit cases to prevent stack overflow."
  */
 function findSelectedItems(
-  event: MouseEvent,
+  e: React.MouseEvent<HTMLTextAreaElement>,
   sourceUid: string,
   targetUid: string,
 ) {
-  const target = event.target as HTMLElement,
-    page = target.closest('.node-page') ?? target.closest('.block-page'),
-    blockEls = page && page.querySelectorAll<HTMLElement>('.block-container'),
-    uids = blockEls && [...blockEls].map((e) => getDatasetUid(e))
-  // uids_childrenUids = zipmap(uids, blocks.map(getDatasetChildrenUids)),
-  // uids_childrenUids = map(uids, blocks.map(getDatasetChildrenUids)),
-  // uids_childrenUids = uids && uids.map(e => [e, getDatasetChildrenUid(el)]),
+  const { currentTarget: target } = e,
+    page = target.closest('.node-page') ?? target.closest('.block-page')
 
-  // console.debug(page, blockEls, uids)
+  if (page) {
+    const qBlockEls = page.querySelectorAll<HTMLElement>('.block-container'),
+      blockEls = [...qBlockEls],
+      uids = blockEls.map((e) => getDatasetUid(e)),
+      childrenUids = blockEls.map((e) => getDatasetChildrenUid(e)),
+      uids_childrenUids = Object.fromEntries(
+        uids.map<[string, string[] | null]>((e, i) => [e, childrenUids[i]]),
+      ),
+      indexedUids = uids.map<[number, string]>((e, i) => [i, e]),
+      startIndex = indexedUids.find(([_, uid]) => sourceUid === uid)?.[0],
+      endIndex = indexedUids.find(([_, uid]) => targetUid === uid)?.[0]
 
-  //   indexedUids = uids.mapIndexed(vector),
-  //   startIndex = indexedUids.filter((_idx, uid) => sourceUid === uid),
-  //   endIndex = indexedUids.filter((_idx, uid) => targetUid === uid),
-  //   selectedUids = subscribe('select-subs/items'),
-  //   candidateUids = indexedUids.filter(
-  //     (idx, _uid) =>
-  //       Math.min(startIndex, endIndex) <= idx <= Math.max(startIndex, endIndex),
-  //   ),
-  //   descendantUids = loop(),
-  //   toRemoveUids = set.intersect(selectedUids, descendantUids),
-  //   selectionNewUids = set.difference(candidateUids, descendantUids),
-  //   newSelectedUids = set.union(
-  //     set.difference(selectedUids, toRemoveUids),
-  //     selectionNewUids,
-  //   ),
-  //   selectionOrder = indexedUids
-  //     .filter((_k, v) => newSelectedUids.contains(v))
-  //     .mapv('second')
+    if (startIndex && endIndex) {
+      const candidateUids = indexedUids
+          ?.filter(
+            ([i, uid]) =>
+              Math.min(startIndex, endIndex) <= i &&
+              i <= Math.max(startIndex, endIndex),
+          )
+          .map((e) => e[1]),
+        descendantsUids = getDescendantsUids(candidateUids, uids_childrenUids),
+        selectedUids = rfdbRepo.getValue().selection.items,
+        toRemoveUids = intersection(selectedUids, descendantsUids),
+        selectionNewUids = difference(candidateUids, descendantsUids),
+        newSelectedUids = union(
+          difference(selectedUids, toRemoveUids),
+          selectionNewUids,
+        ),
+        selectionOrder = indexedUids
+          .filter(([, v]) => newSelectedUids.includes(v))
+          .map(([, v]) => v)
 
-  // if (startIndex && endIndex) {
-  //   dispatchEvent('select-events/set-items', selectionOrder)
-  // }
+      if (selectionOrder) {
+        events.selectionSetItems(selectionOrder)
+      }
+    }
+  }
 }
 
 // const textareaPaste = (e, _uid, state) => {
@@ -96,6 +120,13 @@ function findSelectedItems(
 //   }
 // }
 
+export function textareaBlur(
+  event: React.ChangeEvent<HTMLTextAreaElement>,
+  uid: string,
+) {
+  events.blockSave(uid, event.currentTarget.value)
+}
+
 export function textareaChange(
   event: React.ChangeEvent<HTMLTextAreaElement>,
   uid: string,
@@ -104,6 +135,7 @@ export function textareaChange(
   // state: BlockElState,
   // setState: BlockElStateSetFn,
   // setStr: (s: string) => void,
+  setLocalStr: (s: string) => void,
 ) {
   // setState({
   //   ...state,
@@ -112,19 +144,26 @@ export function textareaChange(
   // if (state.str.idleFn) {
   //   state.str.idleFn()
   // }
+
   // setStr(event.currentTarget.value)
-  events.blockSave(uid, event.currentTarget.value)
+  // events.blockSave(uid, event.currentTarget.value)
+
+  setLocalStr(event.currentTarget.value)
 }
 
 /**
  * "If shift key is held when user clicks across multiple blocks, select the blocks."
  */
-export function textareaClick(event: MouseEvent, targetUid: string): void {
-  const shift = event.shiftKey,
+export function textareaClick(
+  e: React.MouseEvent<HTMLTextAreaElement>,
+  targetUid: string,
+): void {
+  const { shiftKey: shift } = e,
     sourceUid = rfdbRepo.getValue().editing?.uid
 
   if (shift && sourceUid && sourceUid !== targetUid) {
-    findSelectedItems(event, sourceUid, targetUid)
+    findSelectedItems(e, sourceUid, targetUid)
+  } else {
     events.selectionClear()
   }
 }
@@ -137,13 +176,13 @@ function globalMouseup() {
 /**
  * * "Attach global mouseup listener. Listener can't be local because user might let go of mousedown off of a block.
     See https://javascript.info/mouse-events-basics#events-order"
- * 
  *
  */
-export function textareaMouseDown(e: MouseEvent) {
+export function textareaMouseDown(e: React.MouseEvent<HTMLTextAreaElement>) {
   e.stopPropagation()
+
   if (!e.shiftKey) {
-    events.editingTarget(e.target as HTMLTextAreaElement)
+    events.editingTarget(e.currentTarget)
 
     const { mouseDown } = rfdbRepo.getValue()
     if (!mouseDown) {
@@ -157,9 +196,13 @@ export function textareaMouseDown(e: MouseEvent) {
  * "When mouse-down, user is selecting multiple blocks with click+drag.
     Use same algorithm as shift-enter, only updating the source and target."
  * 
- * @bug firefox only, when current mouse is down, onMouseEnter event won't fire and jamed until mouse is up
+ * @bug firefox, when mouse is down, 
+ *      onMouseEnter event won't fire and jamed until mouse is up
  */
-export function textareaMouseEnter(e: MouseEvent, targetUid: string) {
+export function textareaMouseEnter(
+  e: React.MouseEvent<HTMLTextAreaElement>,
+  targetUid: string,
+) {
   const {
     editing: { uid: sourceUid },
     mouseDown,
@@ -169,4 +212,11 @@ export function textareaMouseEnter(e: MouseEvent, targetUid: string) {
     events.selectionClear()
     findSelectedItems(e, sourceUid, targetUid)
   }
+}
+
+/**
+ * When textarea unmount, save local string to block
+ */
+export function textareaUnmount(uid: string, localStr: string) {
+  events.blockSave(uid, localStr)
 }

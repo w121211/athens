@@ -22,8 +22,6 @@ import {
 import {
   BlockReducer,
   BlockReducerFn,
-  blockRepo,
-  blocksStore,
   getBlock,
   getBlockChildren,
 } from '../stores/block.repository'
@@ -252,9 +250,6 @@ export function blockRemoveOp(removeBlock: Block): BlockReducer[] {
 }
 
 export function blockSaveOp(uid: string, str: string): BlockReducer[] {
-  // if (block.str === str) {
-  //   return []
-  // }
   return [updateEntities(uid, { str, editTime: Date.now() })]
 }
 

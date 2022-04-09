@@ -23,6 +23,7 @@ import {
   upsertEntities,
   withEntities,
 } from '@ngneat/elf-entities'
+import { stateHistory } from '@ngneat/elf-state-history'
 import { title } from 'process'
 import {
   combineLatest,
@@ -47,12 +48,21 @@ export type BlockReducer = Reducer<BlocksStoreState>
 
 export type BlockReducerFn = () => BlockReducer[]
 
+//
 // Store & Getters
+//
+//
+//
+//
+//
+//
 
 export const blocksStore = createStore(
   { name: 'blocksStore' },
-  withEntities<Block, 'uid'>({ idKey: 'uid' }),
+  withEntities<Block, 'uid'>({ idKey: 'uid', initialValue: [] }),
 )
+
+const blocksStateHistory = stateHistory(blocksStore)
 
 export function getBlock(uid: string): Block {
   const block = blocksStore.query(getEntity(uid))
@@ -72,6 +82,18 @@ export function getBlockChildren(uid: string): Block[] {
 }
 
 class BlockRepository {
+  undo() {
+    blocksStateHistory.undo()
+  }
+
+  redo() {
+    blocksStateHistory.redo()
+  }
+
+  clearHistory() {
+    blocksStateHistory.clear()
+  }
+
   getBlock$(uid: string) {
     return blocksStore.pipe(
       selectEntity(uid),
@@ -109,7 +131,18 @@ class BlockRepository {
    * TODO: undo/redo
    */
   updateChain(chainOpFns: BlockReducerFn[]) {
-    for (const fn of chainOpFns) {
+    for (let i = 0; i < chainOpFns.length; i++) {
+      const isFirst = i === 0,
+        isLast = i === chainOpFns.length - 1,
+        fn = chainOpFns[i]
+
+      if (isFirst) {
+        blocksStateHistory.pause()
+      }
+      if (isLast) {
+        blocksStateHistory.resume()
+      }
+
       blocksStore.update(...fn())
     }
   }

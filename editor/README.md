@@ -91,14 +91,28 @@ Case: show notification for a merge request
 
 Case: show warning for current doc is behind remote note
 
-#
+# TODO
 
-Stories
+functions
 
-- note meta form
-- note starter with template buttons
+- [] modal editor
+- [] inline elements
+- [v] auto complete
+- [] redo/undo
+  - [] caret lost after undo
+  - [] textarea value undo, redo
+  - [] textarea value lost after undo
+- [] select
+  - [] mouse select
+  - [] keyboard select
+- [] drag and drop
+- [] copy and paste
 
-Discuss post
+stories
 
-- add code-block
--
+- editor
+- doc
+- block
+- auto-complete
+- parse-and-render
+- inline-items

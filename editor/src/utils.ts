@@ -1,13 +1,16 @@
+import React from 'react'
 import { nanoid } from 'nanoid'
-import { DragEvent, KeyboardEvent } from 'react'
 
-export function destructKeyDown(e: KeyboardEvent) {
-  const key = e.code, // key = e.keyCode,
-    ctrl = e.ctrlKey,
-    meta = e.metaKey,
-    shift = e.shiftKey,
-    alt = e.altKey
-  return { keyCode: key, ctrl, meta, shift, alt }
+export function destructKeyDown(e: React.KeyboardEvent | KeyboardEvent) {
+  const {
+    key,
+    keyCode,
+    altKey: alt,
+    ctrlKey: ctrl,
+    metaKey: meta,
+    shiftKey: shift,
+  } = e
+  return { key, keyCode, alt, ctrl, meta, shift }
 }
 
 // ------ OS ------
@@ -22,7 +25,7 @@ function getOS() {
   return 'Others'
 }
 
-export function shortcutKey(meta: boolean, ctrl: boolean) {
+export function isShortcutKey(meta: boolean, ctrl: boolean) {
   const os = getOS()
   if (os === 'Mac' && meta) return true
   if (os === 'Windows' && ctrl) return true
@@ -49,9 +52,13 @@ export function genBlockUid(): string {
 //
 //
 
-export function getDatasetUid(el: HTMLElement): string | null {
+export function getDatasetUid(el: HTMLElement): string {
   const block = el.closest('.block-container'),
     uid = block && block.getAttribute('data-uid')
+
+  if (uid === null) {
+    throw new Error('uid === null')
+  }
   return uid
 }
 
@@ -64,7 +71,7 @@ export function getDatasetChildrenUid(el: HTMLElement): string[] | null {
 /**
  * "Finds offset between mouse event and container. If container is not passed, use target as container."
  */
-export function mouseOffset(event: DragEvent, container: Element) {
+export function mouseOffset(event: React.DragEvent, container: Element) {
   const rect = container.getBoundingClientRect(),
     offsetX = event.pageX - rect.left,
     offsetY = event.pageY - rect.top

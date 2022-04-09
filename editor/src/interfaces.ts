@@ -1,26 +1,11 @@
 //
-// Component state
+// Component State - commonly used in various components & handlers
 //
 //
 //
 //
 //
 //
-
-export type SearchType = 'page' | 'slash' | 'hashtag' | 'template'
-
-export type DragTarget = 'first' | 'before' | 'after'
-
-export type Search = {
-  type: SearchType | null
-  index: number | null // search-hit index
-  query: string | null // search-term
-  results: {
-    nodeTitle?: string
-    blockStr?: string
-    blockUid?: string
-  }[]
-}
 
 export type CaretPosition = {
   top: number
@@ -28,43 +13,31 @@ export type CaretPosition = {
   height: number
 }
 
-// export type BlockElState = {
-//   // uid: string
-//   str: {
-//     local: string | null
-//     previous: string | null
-//     saveFn?: () => void
-//     idleFn?: () => void
-//   }
-//   search: {
-//     type: SearchType | null
-//     index: number | null // search-hit index
-//     query: string | null // search-term
-//     results: {
-//       nodeTitle?: string
-//       blockStr?: string
-//       blockUid?: string
-//     }[]
-//   }
-//   dragging?: boolean
-//   dragTarget: DragTarget | null
-//   lastKeydown?: DestructTextareaKeyEvent | null
-//   contextMenu?: {
-//     x: null
-//     y: null
-//     show: boolean
-//   }
-//   showEditableDom: boolean
-//   caretPosition: {
-//     top: number
-//     left: number
-//     height: number
-//   }
-// }
+export type DragTarget = 'first' | 'before' | 'after'
 
-// export type BlockElStateSetFn = React.Dispatch<
-//   React.SetStateAction<BlockElState>
-// >
+/**
+ * athens naming:
+ * - term -> query
+ * - hit-index -> index
+ * - hits -> results
+ */
+export type Search = {
+  type: SearchType | null
+  term: string | null
+  hitIndex: number | null
+  hits: SearchHit[]
+}
+
+export type SearchHit = {
+  id: string
+  discussTitle?: string
+  note?: {
+    symbol: string
+    webpageTitle?: string
+  }
+}
+
+export type SearchType = 'page' | 'slash' | 'hashtag' | 'template'
 
 //
 // Events & Dom events
@@ -215,13 +188,18 @@ export type EditorProps = {
 }
 
 //
-// Server-side Data
+// Server-side datatypes
 //
 //
 //
 //
 //
 //
+
+export type Discuss = {
+  id: string
+  title: string
+}
 
 type NoteMeta = {
   webTitle?: string
@@ -246,4 +224,110 @@ export type NoteDraft = {
   id: string
   content: Block[]
   fromNoteDocId?: string
+}
+
+//
+// Inline Items
+//
+//
+//
+//
+//
+//
+
+export type InlineText = {
+  type: 'text'
+  str: string
+}
+
+// export type InlineAuthor = {
+//   type: 'author'
+//   str: string
+//   authorName: string
+// }
+
+export type InlineDiscuss = {
+  type: 'inline-discuss'
+  str: string
+  title: string
+  id?: string
+}
+
+export type InlineFiltertag = {
+  type: 'inline-filtertag'
+  str: string
+}
+
+// export type InlineMirror = {
+//   type: 'inline-mirror'
+//   str: string
+//   // symbolType: SymbolType
+//   mirrorSymbol: string
+//   author?: string // 需要 parse 取得，eg ::$XX @cnyes
+// }
+
+// export type InlineEmoji = {
+//   type: 'emoji'
+//   str: string
+//   id: number
+//   hashtag?: GQLHashtag
+// }
+
+// export type InlineNewHashtag = {
+//   type: 'new-hashtag'
+//   str: string
+// }
+
+export type InlinePoll = {
+  type: 'inline-poll'
+  str: string
+  id?: string
+  choices: string[]
+  // pollCopy?: PollFragment
+  // vote?: author vote
+}
+
+export type InlineRate = {
+  type: 'inline-rate'
+  str: string
+  id?: string
+  params: string[]
+  // rateCopy?: RateFragment
+  authorName?: string
+  targetSymbol?: string
+  // choice?: RateChoice
+  // vote?: author vote
+}
+
+export type InlineSymbol = {
+  type: 'inline-symbol'
+  str: string
+  // symbolType: SymbolType
+  symbol: string
+}
+
+export type InlineComment = {
+  type: 'inline-comment'
+  str: string
+}
+
+export type InlineItem =
+  | InlineText
+  // | InlineAuthor
+  | InlineDiscuss
+  | InlineFiltertag
+  // | InlineMirror
+  // | InlineHashtag
+  // | InlineNewHashtag
+  | InlinePoll
+  | InlineRate
+  | InlineSymbol
+  | InlineComment
+
+function isInlinePoll(item: InlineItem): item is InlinePoll {
+  return item.type === 'inline-poll'
+}
+
+function isInlineRate(item: InlineItem): item is InlineRate {
+  return item.type === 'inline-rate'
 }

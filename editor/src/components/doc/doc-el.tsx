@@ -1,12 +1,6 @@
-import React from 'react'
+import React, { ReactNode, useEffect } from 'react'
 import styled from 'styled-components'
-import {
-  Today,
-  MoreHoriz,
-  Delete,
-  Bookmark,
-  BubbleChart,
-} from '@material-ui/icons'
+import { MoreHoriz } from '@material-ui/icons'
 import PopperUnstyled from '@mui/base/PopperUnstyled'
 import ModalUnstyled from '@mui/base/ModalUnstyled'
 
@@ -26,10 +20,9 @@ import { DOMRoot } from '../utils'
 import { BlockListContainer } from '../block/block-list'
 import { blockRepo, getBlock } from '../../stores/block.repository'
 import { Doc } from '../../interfaces'
-import { MouseEvent } from 'react'
 import { useObservable } from '@ngneat/react-rxjs'
-import { docRemove, docSave } from '../../events'
-import { ReactNode } from 'react'
+import { docRemove, docSave, historyClear, historyUndo } from '../../events'
+import { hotkey, multiBlockSelection } from '../../listeners'
 
 // const PageWrap = styled.article`
 //   padding: 1rem;
@@ -210,7 +203,7 @@ export const DocEl = ({
   // const { PresenceProvider, clearPresence } = usePresenceProvider({
   //   presentPeople: mockPresence,
   // })
-  const handlePressMenuToggle = (e: MouseEvent<HTMLButtonElement>) => {
+  const handlePressMenuToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
     setPageMenuAnchor(e.currentTarget)
     setIsPageMenuOpen(true)
   }
@@ -218,6 +211,15 @@ export const DocEl = ({
     setPageMenuAnchor(null)
     setIsPageMenuOpen(false)
   }
+
+  useEffect(() => {
+    document.addEventListener('keydown', hotkey)
+    document.addEventListener('keydown', multiBlockSelection)
+    return () => {
+      document.removeEventListener('keydown', hotkey)
+      document.removeEventListener('keydown', multiBlockSelection)
+    }
+  }, [])
 
   // const { title } = doc,
   //   block = getBlock(doc.blockUid)
