@@ -549,6 +549,21 @@
       (throw (ex-info fail-msg position)))))
 
 
+(defn position->uid+parent
+  [db {:keys [relation block/uid page/title] :as position}]
+  ;; Validate the position itself before determining the parent.
+  (validate-position db position)
+  (let [;; Pages must be referenced by title but internally we still use uids for them.
+        uid                     (or uid (get-page-uid db title))
+        {parent-uid :block/uid} (if (#{:first :last} relation)
+                                  ;; We already know the blocks exists because of validate-position
+                                  (get-block db [:block/uid uid])
+                                  (if-let [parent (get-parent db [:block/uid uid])]
+                                    parent
+                                    (throw (ex-info "Ref block does not have parent" {:block/uid uid}))))]
+    [uid parent-uid]))
+
+
 (defn extract-tag-values
   "Extracts `tag` values from `children-fn` children with `extractor-fn` from parser AST."
   [ast tag-selector children-fn extractor-fn]
@@ -571,17 +586,13 @@
 (defn string->lookup-refs
   "Given string s, compute the set of refs expressed as Datalog lookup refs."
   [s]
-  (let [ast                 (parser/structure-parse-to-ast s)
-        block-ref-str->uid  #(strip-markup % "((" "))")
-        page-ref-str->title #(or (strip-markup % "#[[" "]]")
-                                 (strip-markup % "[[" "]]")
-                                 (strip-markup % "#" ""))
-        block-lookups       (into #{}
-                                  (map (fn [uid] [:block/uid uid]))
-                                  (extract-tag-values ast #{:block-ref} identity #(-> % second :from block-ref-str->uid)))
-        page-lookups        (into #{}
-                                  (map (fn [title] [:node/title title]))
-                                  (extract-tag-values ast #{:page-link :hashtag} identity #(-> % second :from page-ref-str->title)))]
+  (let [ast           (parser/structure-parse-to-ast s)
+        block-lookups (into #{}
+                            (map (fn [uid] [:block/uid uid]))
+                            (extract-tag-values ast #{:block-ref} identity #(-> % second :string)))
+        page-lookups  (into #{}
+                            (map (fn [title] [:node/title title]))
+                            (extract-tag-values ast #{:page-link :hashtag} identity #(-> % second :string)))]
     (set/union block-lookups page-lookups)))
 
 

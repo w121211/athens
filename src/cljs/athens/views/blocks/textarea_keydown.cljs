@@ -3,6 +3,7 @@
     ["@material-ui/icons/DesktopWindows" :default DesktopWindows]
     ["@material-ui/icons/Done" :default Done]
     ["@material-ui/icons/FlipToFront" :default FlipToFront]
+    ["@material-ui/icons/Person" :default Person]
     ["@material-ui/icons/Timer" :default Timer]
     ["@material-ui/icons/Today" :default Today]
     ["@material-ui/icons/ViewDayRounded" :default ViewDayRounded]
@@ -21,7 +22,7 @@
     [goog.dom.selection :refer [setStart setEnd getText setCursorPosition getEndPoints]]
     [goog.events.KeyCodes :refer [isCharacterKey]]
     [goog.functions :refer [throttle #_debounce]]
-    [re-frame.core :refer [dispatch dispatch-sync subscribe]])
+    [re-frame.core :as rf :refer [dispatch dispatch-sync subscribe]])
   (:import
     (goog.events
       KeyCodes)))
@@ -97,16 +98,21 @@
 ;; Dropdown: inline-search and slash commands
 
 ;; TODO: some expansions require caret placement after
-(def slash-options
-  [["Add Todo"      Done "{{[[TODO]]}} " "cmd-enter" nil]
-   ["Current Time"  Timer (fn [] (.. (js/Date.) (toLocaleTimeString [] (clj->js {"timeStyle" "short"})))) nil nil]
-   ["Today"         Today (fn [] (str "[[" (:title (dates/get-day 0)) "]] ")) nil nil]
-   ["Tomorrow"      Today (fn [] (str "[[" (:title (dates/get-day -1)) "]]")) nil nil]
-   ["Yesterday"     Today (fn [] (str "[[" (:title (dates/get-day 1)) "]]")) nil nil]
-   ["YouTube Embed" YouTube "{{[[youtube]]: }}" nil 2]
-   ["iframe Embed"  DesktopWindows "{{iframe: }}" nil 2]
-   ["Block Embed"   ViewDayRounded "{{[[embed]]: (())}}" nil 4]
-   ["Template"      FlipToFront ";;" nil nil]])
+(defn slash-options
+  []
+  (cond->
+    [["Add Todo"      Done "{{[[TODO]]}} " "cmd-enter" nil]
+     ["Current Time"  Timer (fn [] (.. (js/Date.) (toLocaleTimeString [] (clj->js {"timeStyle" "short"})))) nil nil]
+     ["Today"         Today (fn [] (str "[[" (:title (dates/get-day 0)) "]] ")) nil nil]
+     ["Tomorrow"      Today (fn [] (str "[[" (:title (dates/get-day -1)) "]]")) nil nil]
+     ["Yesterday"     Today (fn [] (str "[[" (:title (dates/get-day 1)) "]]")) nil nil]
+     ["YouTube Embed" YouTube "{{[[youtube]]: }}" nil 2]
+     ["iframe Embed"  DesktopWindows "{{iframe: }}" nil 2]
+     ["Block Embed"   ViewDayRounded "{{[[embed]]: (())}}" nil 4]
+     ["Template"      FlipToFront ";;" nil nil]]
+    @(subscribe [:db-picker/remote-db?])
+    (conj (let [username (:username @(rf/subscribe [:presence/current-user]))]
+            [(str "Me (" username ")") Person (fn [] (str "[[" username "]]")) nil nil]))))
 
 
 ;; [ "Block Embed" #(str "[[" (:title (dates/get-day 1)) "]]")]
@@ -118,10 +124,10 @@
 (defn filter-slash-options
   [query]
   (if (blank? query)
-    slash-options
+    (slash-options)
     (filterv (fn [[text]]
                (includes? (lower-case text) (lower-case query)))
-             slash-options)))
+             (slash-options))))
 
 
 (defn update-query
@@ -598,33 +604,59 @@
                                        (nil? (re-find #"(?s)\]" link)))
                                   (let [eid (db/e-by-av :node/title link)]
                                     (if eid
-                                      (router/navigate-page link e)
+                                      (do
+                                        (rf/dispatch [:reporting/navigation {:source :kbd-ctrl-o
+                                                                             :target :page
+                                                                             :pane   (if shift
+                                                                                       :right-pane
+                                                                                       :main-pane)}])
+                                        (router/navigate-page link e))
                                       (let [block-uid (common.utils/gen-block-uid)]
                                         (.blur target)
                                         (dispatch [:page/new {:title     link
                                                               :block-uid block-uid
-                                                              :shift?    shift}]))))
+                                                              :shift?    shift
+                                                              :source    :kbd-ctrl-o}]))))
 
                                   ;; same logic as link
                                   (and (re-find #"(?s)#" head)
                                        (re-find #"(?s)\s" tail))
                                   (let [eid (db/e-by-av :node/title hashtag)]
                                     (if eid
-                                      (router/navigate-page hashtag e)
+                                      (do
+                                        (rf/dispatch [:reporting/navigation {:source :kbd-ctrl-o
+                                                                             :target :hashtag
+                                                                             :pane   (if shift
+                                                                                       :right-pane
+                                                                                       :main-pane)}])
+                                        (router/navigate-page hashtag e))
                                       (let [block-uid (common.utils/gen-block-uid)]
                                         (.blur target)
                                         (dispatch [:page/new {:title     link
                                                               :block-uid block-uid
-                                                              :shift?    shift}]))))
+                                                              :shift?    shift
+                                                              :source    :kbd-ctrl-o}]))))
 
                                   (and (re-find #"(?s)\(\(" head)
                                        (re-find #"(?s)\)\)" tail)
                                        (nil? (re-find #"(?s)\(" block-ref))
                                        (nil? (re-find #"(?s)\)" block-ref))
                                        (db/e-by-av :block/uid block-ref))
-                                  (router/navigate-uid block-ref e)
+                                  (do
+                                    (rf/dispatch [:reporting/navigation {:source :kbd-ctrl-o
+                                                                         :target :block
+                                                                         :pane   (if shift
+                                                                                   :right-pane
+                                                                                   :main-pane)}])
+                                    (router/navigate-uid block-ref e))
 
-                                  :else (router/navigate-uid uid e))))))
+                                  :else (do
+                                          (rf/dispatch [:reporting/navigation {:source :kbd-ctrl-o
+                                                                               :target :block
+                                                                               :pane   (if shift
+                                                                                         :right-pane
+                                                                                         :main-pane)}])
+                                          (router/navigate-uid uid e)))))))
 
 
 (defn pair-char?
@@ -744,7 +776,7 @@
                                            :search/index 0
                                            :search/query ""
                                            :search/type :slash
-                                           :search/results slash-options)
+                                           :search/results (slash-options))
       (and (= key "#") (nil? type)) (swap! state assoc
                                            :search/index 0
                                            :search/query ""

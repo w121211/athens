@@ -10,6 +10,7 @@
     [athens.style :refer [color OPACITIES]]
     [clojure.string :as str]
     [instaparse.core :as insta]
+    [re-frame.core :as rf]
     [stylefy.core :as stylefy :refer [use-style]]))
 
 
@@ -84,28 +85,61 @@
    (cond
      (not (str/blank? title))
      [:span {:on-click (fn [e]
-                         (.. e stopPropagation) ; prevent bubbling up click handler for nested links
-                         (router/navigate-page (parse-title title-coll) e))}
+                         (let [parsed-title (parse-title title-coll)
+                               shift?       (.-shiftKey e)]
+                           (.. e stopPropagation) ; prevent bubbling up click handler for nested links
+                           (rf/dispatch [:reporting/navigation {:source :pr-page-link
+                                                                :target :page
+                                                                :pane   (if shift?
+                                                                          :right-pane
+                                                                          :main-pane)}])
+                           (router/navigate-page parsed-title e)))}
       title]
 
      :else
      (into [:span {:on-click (fn [e]
-                               (.. e stopPropagation) ; prevent bubbling up click handler for nested links
-                               (router/navigate-page (parse-title title-coll) e))}]
+                               (let [parsed-title (parse-title title-coll)
+                                     shift?       (.-shiftKey e)]
+                                 (.. e stopPropagation) ; prevent bubbling up click handler for nested links
+                                 (rf/dispatch [:reporting/navigation {:source :pr-page-link
+                                                                      :target :page
+                                                                      :pane   (if shift?
+                                                                                :right-pane
+                                                                                :main-pane)}])
+                                 (router/navigate-page parsed-title e)))}]
            title-coll))
    [:span {:class "formatting"} "]]"]])
 
 
+(defn- block-breadcrumb-string
+  [parents]
+  (->> parents
+       (map #(or (:node/title %)
+                 (:block/string %)))
+       (str/join " >\n")))
+
+
 (defn render-block-ref
   [{:keys [from title]} ref-uid uid]
-  (let [block (reactive/get-reactive-block-or-page-by-uid ref-uid)]
+  (let [block     (reactive/get-reactive-block-or-page-by-uid ref-uid)
+        parents   (reactive/get-reactive-parents-recursively [:block/uid ref-uid])
+        bc-string (block-breadcrumb-string parents)]
     (if block
       [:span (assoc (use-style block-ref {:class "block-ref"})
-                    :title (str/replace from
-                                        (str "((" ref-uid "))")
-                                        (str "((" (:block/string block) "))")))
+                    :title (-> from
+                               (str/replace "]("
+                                            "]\n---\n(")
+                               (str/replace (str "((" ref-uid "))")
+                                            bc-string)))
        [:span {:class    "contents"
-               :on-click #(router/navigate-uid ref-uid %)}
+               :on-click (fn [e]
+                           (let [shift? (.-shiftKey e)]
+                             (rf/dispatch [:reporting/navigation {:source :pr-block-ref
+                                                                  :target :block
+                                                                  :pane   (if shift?
+                                                                            :right-pane
+                                                                            :main-pane)}])
+                             (router/navigate-uid ref-uid e)))}
         (cond
           (= uid ref-uid)
           [parse-and-render "{{SELF}}"]
@@ -181,7 +215,15 @@
                              (render-page-link attr title-coll))
      :hashtag              (fn [{_from :from} & title-coll]
                              [:span (use-style hashtag {:class    "hashtag"
-                                                        :on-click #(router/navigate-page (parse-title title-coll) %)})
+                                                        :on-click (fn [e]
+                                                                    (let [parsed-title (parse-title title-coll)
+                                                                          shift?       (.-shiftKey e)]
+                                                                      (rf/dispatch [:reporting/navigation {:source :pr-hashtag
+                                                                                                           :target :hashtag
+                                                                                                           :pane   (if shift?
+                                                                                                                     :right-pane
+                                                                                                                     :main-pane)}])
+                                                                      (router/navigate-page parsed-title e)))})
                               [:span {:class "formatting"} "#"]
                               [:span {:class "contents"} title-coll]])
      :block-ref            (fn [{_from :from :as attr} ref-uid]
